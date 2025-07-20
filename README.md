@@ -6,11 +6,11 @@
 [![Tests](https://github.com/research-team/uncertainty-ids/workflows/Tests/badge.svg)](https://github.com/research-team/uncertainty-ids/actions)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://uncertainty-ids.readthedocs.io/)
 
-A production-ready implementation of uncertainty-aware intrusion detection based on Bayesian ensemble transformers and in-context learning theory from "On the Training Convergence of Transformers for In-Context Classification".
+A production-ready implementation of our novel uncertainty-aware intrusion detection framework featuring Bayesian ensemble transformers with rigorous theoretical foundations and principled uncertainty quantification.
 
 ## 🚀 Key Features
 
-- **🎯 Theoretical Foundation**: Built on proven convergence guarantees from transformer in-context learning
+- **🎯 Theoretical Foundation**: Novel convergence guarantees and uncertainty bounds for transformer-based intrusion detection
 - **🔬 Uncertainty Quantification**: Separates epistemic and aleatoric uncertainty for better decision-making
 - **🤖 Bayesian Ensemble**: Multiple transformer models provide robust predictions with confidence estimates
 - **⚡ Real-time Processing**: Optimized for production deployment in network security operations centers
@@ -165,7 +165,7 @@ print(f"Requires Review: {result['requires_review']}")
 
 ### Mathematical Foundation
 
-The system builds on the theoretical framework from "On the Training Convergence of Transformers for In-Context Classification":
+Our novel theoretical framework establishes convergence guarantees for transformer-based intrusion detection:
 
 ```
 F(E; W^V, W^KQ) = E + W^V E · (E^T W^KQ E) / ρ
