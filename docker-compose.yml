@@ -1,0 +1,217 @@
+# Docker Compose configuration for Uncertainty-Aware Intrusion Detection System
+
+version: '3.8'
+
+services:
+  # Main API service
+  uncertainty-ids-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: uncertainty-ids-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/models/uncertainty_ids_model.pth
+      - PROCESSOR_PATH=/app/preprocessors/
+      - LOG_LEVEL=INFO
+      - WORKERS=4
+    volumes:
+      - ./models:/app/models:ro
+      - ./preprocessors:/app/preprocessors:ro
+      - ./logs:/app/logs
+      - ./data:/app/data:ro
+    depends_on:
+      - redis
+      - prometheus
+    networks:
+      - uncertainty-ids-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: uncertainty-ids-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - uncertainty-ids-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: uncertainty-ids-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - uncertainty-ids-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: uncertainty-ids-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - uncertainty-ids-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: uncertainty-ids-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - uncertainty-ids-network
+    restart: unless-stopped
+    depends_on:
+      - uncertainty-ids-api
+
+  # Development service (for development only)
+  uncertainty-ids-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: uncertainty-ids-dev
+    ports:
+      - "8001:8000"
+    environment:
+      - MODEL_PATH=/app/models/uncertainty_ids_model.pth
+      - PROCESSOR_PATH=/app/preprocessors/
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+    volumes:
+      - .:/app
+      - ./models:/app/models
+      - ./preprocessors:/app/preprocessors
+      - ./logs:/app/logs
+      - ./data:/app/data
+    networks:
+      - uncertainty-ids-network
+    profiles:
+      - dev
+    command: ["python", "-m", "uncertainty_ids.api.server", "--reload"]
+
+  # GPU-enabled service (requires nvidia-docker)
+  uncertainty-ids-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gpu
+    container_name: uncertainty-ids-gpu
+    ports:
+      - "8002:8000"
+    environment:
+      - MODEL_PATH=/app/models/uncertainty_ids_model.pth
+      - PROCESSOR_PATH=/app/preprocessors/
+      - LOG_LEVEL=INFO
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./models:/app/models:ro
+      - ./preprocessors:/app/preprocessors:ro
+      - ./logs:/app/logs
+      - ./data:/app/data:ro
+    networks:
+      - uncertainty-ids-network
+    profiles:
+      - gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Training service (for model training)
+  uncertainty-ids-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: uncertainty-ids-trainer
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+      - ./models:/app/models
+      - ./preprocessors:/app/preprocessors
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - uncertainty-ids-network
+    profiles:
+      - training
+    command: ["python", "-m", "uncertainty_ids.training.train", "--config", "/app/configs/training.yaml"]
+
+  # Jupyter notebook service (for development and analysis)
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: uncertainty-ids-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - .:/app
+      - ./notebooks:/app/notebooks
+      - ./models:/app/models
+      - ./data:/app/data
+    networks:
+      - uncertainty-ids-network
+    profiles:
+      - dev
+    command: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''"]
+
+networks:
+  uncertainty-ids-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
