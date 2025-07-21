@@ -93,7 +93,7 @@ uncertainty-ids/
 ├── data/                     # Dataset storage
 │   └── processed/            # Preprocessed datasets (NSL-KDD, CICIDS2017, UNSW-NB15)
 ├── figures/                  # Generated figures and visualizations
-├── real_experiment_results/  # Authentic experimental validation results
+├── experiment_results/      # Experimental validation results
 ├── examples/                 # Usage examples and tutorials
 ├── tests/                    # Unit and integration tests
 ├── scripts/                  # Utility scripts
@@ -280,13 +280,13 @@ Our method has been extensively evaluated on three standard intrusion detection 
 
 ```bash
 # Run experiments on all datasets
-python scripts/run_experiments.py --config configs/default_config.yaml
+python experiments.py --config configs/default_config.yaml
 
 # Generate figures and analysis
 python create_figures.py
 
 # View detailed results
-cat real_experiment_results/all_results.json
+cat experiment_results/all_results.json
 ```
 
 ## 📚 Research & Development

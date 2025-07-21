@@ -308,7 +308,7 @@ def run_baseline_experiments(X_train, X_test, y_train, y_test, dataset_name):
     
     return results
 
-def run_real_experiments():
+def run_experiments():
     """Run real experiments on all datasets"""
     datasets = ['nsl_kdd', 'cicids2017', 'unsw_nb15']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -318,7 +318,7 @@ def run_real_experiments():
     
     # Create results directory in our project space
     project_dir = '/zhome/bb/9/101964/xiuli/IntrDetection'
-    results_dir = os.path.join(project_dir, 'real_experiment_results')
+    results_dir = os.path.join(project_dir, 'experiment_results')
     figures_dir = os.path.join(project_dir, 'figures')
     logs_dir = os.path.join(project_dir, 'logs')
 
@@ -424,7 +424,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Run real experiments
-    results = run_real_experiments()
+    results = run_experiments()
     
     print("\n" + "="*60)
     print("REAL EXPERIMENTS COMPLETED SUCCESSFULLY!")
