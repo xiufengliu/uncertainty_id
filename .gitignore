@@ -169,3 +169,29 @@ paper/
 # Development summary files
 *_SUMMARY.md
 *_summary.md
+
+# Experiment outputs and job files
+*.out
+*.err
+job_output_*
+job_error_*
+experiment_output_*
+job_info_*
+
+# LaTeX compilation files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+
+# Model checkpoints (keep only essential ones)
+best_ensemble_*.pth
+
+# Cluster job scripts
+submit_*.sh
+monitor_*.sh
