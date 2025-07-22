@@ -196,3 +196,14 @@ best_ensemble_*.pth
 # Cluster job scripts
 submit_*.sh
 monitor_*.sh
+
+# Sample and download scripts (keep only essential ones)
+*sample*.py
+download_*.py
+
+# Final submission files (temporary)
+final_submission_summary.json
+
+# Summary markdown files (keep only README.md, CONTRIBUTING.md, INSTALL.md)
+*_SUMMARY.md
+*_summary.md
