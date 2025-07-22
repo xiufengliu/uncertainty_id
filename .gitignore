@@ -205,6 +205,15 @@ download_*.py
 preprocess_*_efficient.py
 process_*_dataset.py
 
+# Synthetic/placeholder figure scripts (keep only real data analysis)
+create_figures.py
+*_placeholder*.py
+
+# Docker files (not needed for research project)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
 # Final submission files (temporary)
 final_submission_summary.json
 
