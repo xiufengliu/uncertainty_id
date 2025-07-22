@@ -14,7 +14,7 @@ import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.calibration import calibration_curve
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib
@@ -241,44 +241,29 @@ def create_data_loaders(X_train, X_test, y_train, y_test, batch_size=256):
     return train_loader, val_loader, test_loader
 
 def calculate_metrics(predictions, targets):
-    """Calculate comprehensive metrics"""
+    """Calculate metrics: FPR, Precision, Recall, F1"""
     pred_labels = (predictions > 0.5).astype(int)
-    
+
+    # Calculate confusion matrix
+    tn, fp, fn, tp = confusion_matrix(targets, pred_labels).ravel()
+
+    # Calculate requested metrics
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+
+    # Additional metrics for completeness
     accuracy = accuracy_score(targets, pred_labels)
-    precision = precision_score(targets, pred_labels, zero_division=0)
-    recall = recall_score(targets, pred_labels, zero_division=0)
-    f1 = f1_score(targets, pred_labels, zero_division=0)
-    auc = roc_auc_score(targets, predictions)
-    
-    # False positive rate
-    tn = np.sum((targets == 0) & (pred_labels == 0))
-    fp = np.sum((targets == 0) & (pred_labels == 1))
-    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
-    
-    # Expected Calibration Error
-    n_bins = 10
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
-    bin_lowers = bin_boundaries[:-1]
-    bin_uppers = bin_boundaries[1:]
-    
-    ece = 0
-    for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
-        in_bin = (predictions > bin_lower) & (predictions <= bin_upper)
-        prop_in_bin = in_bin.mean()
-        
-        if prop_in_bin > 0:
-            accuracy_in_bin = targets[in_bin].mean()
-            avg_confidence_in_bin = predictions[in_bin].mean()
-            ece += np.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
-    
+    auc = roc_auc_score(targets, predictions) if len(np.unique(targets)) > 1 else 0.0
+
     return {
-        'accuracy': accuracy,
+        'fpr': fpr,
         'precision': precision,
         'recall': recall,
         'f1': f1,
-        'auc': auc,
-        'fpr': fpr,
-        'ece': ece
+        'accuracy': accuracy,
+        'auc': auc
     }
 
 def run_baseline_experiments(X_train, X_test, y_train, y_test, dataset_name):
@@ -301,7 +286,7 @@ def run_baseline_experiments(X_train, X_test, y_train, y_test, dataset_name):
             predictions = model.predict_proba(X_test)[:, 1]
             metrics = calculate_metrics(predictions, y_test)
             results[name] = metrics
-            print(f"{name} - Accuracy: {metrics['accuracy']:.4f}, F1: {metrics['f1']:.4f}, ECE: {metrics['ece']:.4f}")
+            print(f"{name} - FPR: {metrics['fpr']:.4f}, Precision: {metrics['precision']:.4f}, Recall: {metrics['recall']:.4f}, F1: {metrics['f1']:.4f}")
         except Exception as e:
             print(f"Error with {name}: {e}")
             continue
