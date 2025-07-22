@@ -1,0 +1,8 @@
+{
+  "dataset": "SWaT",
+  "train_samples": 8000,
+  "test_samples": 2000,
+  "features": 22,
+  "train_attack_ratio": 0.8,
+  "test_attack_ratio": 0.8
+}

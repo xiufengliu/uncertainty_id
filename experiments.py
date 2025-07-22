@@ -310,7 +310,7 @@ def run_baseline_experiments(X_train, X_test, y_train, y_test, dataset_name):
 
 def run_experiments():
     """Run real experiments on all datasets"""
-    datasets = ['nsl_kdd', 'cicids2017', 'unsw_nb15']
+    datasets = ['nsl_kdd', 'cicids2017', 'unsw_nb15', 'swat']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
     

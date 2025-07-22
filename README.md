@@ -17,6 +17,7 @@ Our method achieves strong performance across standard benchmark datasets:
 | **NSL-KDD** | **78.48%** | **77.13%** | **2.09%** | 20.46% |
 | **CICIDS2017** | **99.98%** | **99.88%** | **0.00%** | 0.03% |
 | **UNSW-NB15** | **89.88%** | **92.06%** | **2.23%** | 7.82% |
+| **SWaT** | Ready for testing | - | - | - |
 
 *Results from comprehensive experimental validation on NVIDIA A100 GPU cluster.*
 
@@ -91,7 +92,8 @@ uncertainty-ids/
 │   ├── cli/                  # Command-line interface
 │   └── utils/                # Utility functions
 ├── data/                     # Dataset storage
-│   └── processed/            # Preprocessed datasets (NSL-KDD, CICIDS2017, UNSW-NB15)
+│   ├── raw/                  # Raw datasets
+│   └── processed/            # Preprocessed datasets (NSL-KDD, CICIDS2017, UNSW-NB15, SWaT)
 ├── figures/                  # Generated figures and visualizations
 ├── experiment_results/      # Experimental validation results
 ├── examples/                 # Usage examples and tutorials
