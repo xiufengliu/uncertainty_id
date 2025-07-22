@@ -201,6 +201,10 @@ monitor_*.sh
 *sample*.py
 download_*.py
 
+# Dataset-specific preprocessing scripts (keep only general data_preprocessing.py)
+preprocess_*_efficient.py
+process_*_dataset.py
+
 # Final submission files (temporary)
 final_submission_summary.json
 
