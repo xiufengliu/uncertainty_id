@@ -1,41 +1,13 @@
 """
-Evaluation module for Uncertainty-Aware Intrusion Detection System.
-
-This module provides comprehensive evaluation capabilities including:
-- Detection performance metrics
-- Uncertainty quality assessment
-- Calibration evaluation
-- Visualization tools
-- Benchmark comparisons
+Evaluation utilities for uncertainty-aware intrusion detection.
 """
 
-from .metrics import (
-    DetectionMetrics, UncertaintyMetrics, CalibrationMetrics,
-    ComprehensiveEvaluator
-)
-from .visualizer import (
-    UncertaintyVisualizer, CalibrationPlotter, PerformancePlotter
-)
-from .benchmarks import BenchmarkSuite, ModelComparator
-from .reports import EvaluationReporter, ResultsAnalyzer
+from .metrics import UncertaintyMetrics, CalibrationMetrics, ClassificationMetrics
+from .evaluator import ModelEvaluator
 
 __all__ = [
-    # Metrics
-    'DetectionMetrics',
-    'UncertaintyMetrics', 
+    'UncertaintyMetrics',
     'CalibrationMetrics',
-    'ComprehensiveEvaluator',
-    
-    # Visualization
-    'UncertaintyVisualizer',
-    'CalibrationPlotter',
-    'PerformancePlotter',
-    
-    # Benchmarking
-    'BenchmarkSuite',
-    'ModelComparator',
-    
-    # Reporting
-    'EvaluationReporter',
-    'ResultsAnalyzer',
+    'ClassificationMetrics',
+    'ModelEvaluator'
 ]

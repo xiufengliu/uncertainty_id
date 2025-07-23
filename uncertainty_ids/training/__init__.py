@@ -1,26 +1,13 @@
 """
-Training module for Uncertainty-Aware Intrusion Detection System.
-
-This module provides comprehensive training capabilities including:
-- Model trainers with uncertainty quantification
-- Training loops with early stopping and checkpointing
-- Hyperparameter optimization
-- Distributed training support
+Training utilities for uncertainty-aware intrusion detection.
 """
 
-from .trainer import UncertaintyIDSTrainer, TrainingConfig
-from .loops import TrainingLoop, ValidationLoop
-from .optimizers import create_optimizer, create_scheduler
-from .losses import UncertaintyLoss, EnsembleLoss, CalibrationLoss
+from .trainer import UncertaintyAwareTrainer
+from .losses import CompositeLoss, DiversityLoss, UncertaintyLoss
 
 __all__ = [
-    'UncertaintyIDSTrainer',
-    'TrainingConfig',
-    'TrainingLoop',
-    'ValidationLoop',
-    'create_optimizer',
-    'create_scheduler',
-    'UncertaintyLoss',
-    'EnsembleLoss',
-    'CalibrationLoss',
+    'UncertaintyAwareTrainer',
+    'CompositeLoss',
+    'DiversityLoss',
+    'UncertaintyLoss'
 ]

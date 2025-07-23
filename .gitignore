@@ -220,3 +220,17 @@ final_submission_summary.json
 # Summary markdown files (keep only README.md, CONTRIBUTING.md, INSTALL.md)
 *_SUMMARY.md
 *_summary.md
+
+# Test files (temporary)
+test_*.py
+debug_*.py
+
+# Cluster submission scripts (temporary)
+submit_*.sh
+monitor_*.sh
+
+# Old README files
+README_*.md
+
+# Augment AI assistant files
+.augment/

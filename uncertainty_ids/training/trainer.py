@@ -1,612 +1,350 @@
 """
-Main trainer class for uncertainty-aware intrusion detection models.
-
-This module provides a comprehensive training framework with support for
-uncertainty quantification, ensemble training, and calibration.
+Main trainer for uncertainty-aware intrusion detection.
+Based on the training procedure described in Section 3.3 of the paper.
 """
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
+from typing import Dict, List, Optional, Tuple
 import numpy as np
-import logging
-import time
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
-from dataclasses import dataclass, field
-import json
 from tqdm import tqdm
+import logging
+import os
+from pathlib import Path
 
-from ..models import BayesianEnsembleIDS, SingleLayerTransformerIDS
-from ..utils import UncertaintyCalibrator, ModelCheckpoint, EarlyStopping
-from ..evaluation import ComprehensiveEvaluator
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class TrainingConfig:
-    """Configuration for model training."""
-    
-    # Model configuration
-    model_type: str = 'bayesian_ensemble'
-    model_params: Dict[str, Any] = field(default_factory=lambda: {
-        'n_ensemble': 10,
-        'd_model': 128,
-        'max_seq_len': 50,
-        'n_classes': 2,
-        'dropout_rate': 0.1
-    })
-    
-    # Training parameters
-    batch_size: int = 64
-    n_epochs: int = 100
-    learning_rate: float = 1e-3
-    weight_decay: float = 1e-5
-    gradient_clip_norm: float = 1.0
-    
-    # Optimization
-    optimizer: str = 'adam'
-    scheduler: str = 'reduce_on_plateau'
-    scheduler_params: Dict[str, Any] = field(default_factory=lambda: {
-        'mode': 'min',
-        'factor': 0.5,
-        'patience': 10,
-        'verbose': True
-    })
-    
-    # Regularization
-    ensemble_diversity_weight: float = 0.01
-    uncertainty_regularization_weight: float = 0.01
-    
-    # Early stopping
-    early_stopping_patience: int = 20
-    early_stopping_min_delta: float = 1e-4
-    
-    # Checkpointing
-    save_best_model: bool = True
-    save_checkpoint_every: int = 10
-    checkpoint_dir: str = 'checkpoints'
-    
-    # Calibration
-    calibrate_uncertainty: bool = True
-    calibration_method: str = 'temperature'
-    
-    # Logging
-    log_every: int = 10
-    validate_every: int = 1
-    
-    # Device
-    device: str = 'auto'  # 'auto', 'cpu', 'cuda'
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert config to dictionary."""
-        return {
-            'model_type': self.model_type,
-            'model_params': self.model_params,
-            'batch_size': self.batch_size,
-            'n_epochs': self.n_epochs,
-            'learning_rate': self.learning_rate,
-            'weight_decay': self.weight_decay,
-            'gradient_clip_norm': self.gradient_clip_norm,
-            'optimizer': self.optimizer,
-            'scheduler': self.scheduler,
-            'scheduler_params': self.scheduler_params,
-            'ensemble_diversity_weight': self.ensemble_diversity_weight,
-            'uncertainty_regularization_weight': self.uncertainty_regularization_weight,
-            'early_stopping_patience': self.early_stopping_patience,
-            'early_stopping_min_delta': self.early_stopping_min_delta,
-            'save_best_model': self.save_best_model,
-            'save_checkpoint_every': self.save_checkpoint_every,
-            'checkpoint_dir': self.checkpoint_dir,
-            'calibrate_uncertainty': self.calibrate_uncertainty,
-            'calibration_method': self.calibration_method,
-            'log_every': self.log_every,
-            'validate_every': self.validate_every,
-            'device': self.device,
-        }
+from ..models.transformer import BayesianEnsembleTransformer
+from ..models.uncertainty import UncertaintyQuantifier, TemperatureScaling
+from .losses import CompositeLoss
 
 
-class UncertaintyIDSTrainer:
+class UncertaintyAwareTrainer:
     """
-    Comprehensive trainer for uncertainty-aware intrusion detection models.
+    Trainer for uncertainty-aware intrusion detection model.
     
-    Supports training of both single models and Bayesian ensembles with
-    uncertainty quantification, calibration, and comprehensive evaluation.
+    Implements the training procedure from Section 3.3 including:
+    - Composite loss function (classification + diversity + uncertainty)
+    - Temperature scaling for calibration
+    - Early stopping and model checkpointing
     """
     
-    def __init__(self, config: Union[TrainingConfig, Dict[str, Any]]):
+    def __init__(
+        self,
+        model: BayesianEnsembleTransformer,
+        uncertainty_quantifier: UncertaintyQuantifier,
+        device: torch.device,
+        learning_rate: float = 1e-3,
+        lambda_diversity: float = 0.1,
+        lambda_uncertainty: float = 0.05,
+        class_weights: Optional[torch.Tensor] = None,
+        checkpoint_dir: str = "checkpoints"
+    ):
         """
         Initialize trainer.
         
         Args:
-            config: Training configuration
+            model: Bayesian ensemble transformer model
+            uncertainty_quantifier: Uncertainty quantification module
+            device: Training device (CPU/GPU)
+            learning_rate: Learning rate (default 1e-3 as per paper)
+            lambda_diversity: Diversity regularization weight (λ₁ = 0.1)
+            lambda_uncertainty: Uncertainty regularization weight (λ₂ = 0.05)
+            class_weights: Optional class weights for imbalanced datasets
+            checkpoint_dir: Directory for saving checkpoints
         """
-        if isinstance(config, dict):
-            self.config = TrainingConfig(**config)
-        else:
-            self.config = config
+        self.model = model.to(device)
+        self.uncertainty_quantifier = uncertainty_quantifier.to(device)
+        self.device = device
         
-        # Set device
-        self.device = self._get_device()
-        
-        # Initialize model
-        self.model = self._create_model()
-        
-        # Initialize training components
-        self.optimizer = None
-        self.scheduler = None
-        self.criterion = nn.CrossEntropyLoss()
-        
-        # Initialize utilities
-        self.calibrator = UncertaintyCalibrator(method=self.config.calibration_method)
-        self.evaluator = ComprehensiveEvaluator()
-        self.checkpoint_manager = ModelCheckpoint(
-            save_dir=self.config.checkpoint_dir,
-            save_best=self.config.save_best_model
-        )
-        self.early_stopping = EarlyStopping(
-            patience=self.config.early_stopping_patience,
-            min_delta=self.config.early_stopping_min_delta
+        # Loss function
+        self.criterion = CompositeLoss(
+            lambda_diversity=lambda_diversity,
+            lambda_uncertainty=lambda_uncertainty,
+            class_weights=class_weights
         )
         
-        # Training history
-        self.history = {
-            'train_loss': [],
-            'val_loss': [],
-            'val_accuracy': [],
-            'val_f1_score': [],
-            'val_uncertainty': [],
-            'val_calibration_error': [],
-            'learning_rate': []
-        }
+        # Optimizer (Adam as commonly used for transformers)
+        self.optimizer = torch.optim.Adam(
+            list(model.parameters()) + list(uncertainty_quantifier.parameters()),
+            lr=learning_rate
+        )
         
-        logger.info(f"UncertaintyIDSTrainer initialized with {self.config.model_type} on {self.device}")
-    
-    def _get_device(self) -> torch.device:
-        """Get training device."""
-        if self.config.device == 'auto':
-            if torch.cuda.is_available():
-                return torch.device('cuda')
-            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                return torch.device('mps')
-            else:
-                return torch.device('cpu')
-        else:
-            return torch.device(self.config.device)
-    
-    def _create_model(self):
-        """Create model based on configuration."""
-        if self.config.model_type == 'bayesian_ensemble':
-            model = BayesianEnsembleIDS(**self.config.model_params)
-        elif self.config.model_type == 'single_transformer':
-            model = SingleLayerTransformerIDS(**self.config.model_params)
-        else:
-            raise ValueError(f"Unknown model type: {self.config.model_type}")
+        # Temperature scaling for calibration
+        self.temperature_scaler = TemperatureScaling()
         
-        return model.to(self.device)
-    
-    def _create_optimizer(self):
-        """Create optimizer."""
-        if self.config.optimizer == 'adam':
-            self.optimizer = optim.Adam(
-                self.model.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay
-            )
-        elif self.config.optimizer == 'adamw':
-            self.optimizer = optim.AdamW(
-                self.model.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay
-            )
-        elif self.config.optimizer == 'sgd':
-            self.optimizer = optim.SGD(
-                self.model.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay,
-                momentum=0.9
-            )
-        else:
-            raise ValueError(f"Unknown optimizer: {self.config.optimizer}")
-    
-    def _create_scheduler(self):
-        """Create learning rate scheduler."""
-        if self.config.scheduler == 'reduce_on_plateau':
-            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer, **self.config.scheduler_params
-            )
-        elif self.config.scheduler == 'cosine':
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=self.config.n_epochs
-            )
-        elif self.config.scheduler == 'step':
-            self.scheduler = optim.lr_scheduler.StepLR(
-                self.optimizer, step_size=30, gamma=0.1
-            )
-        elif self.config.scheduler == 'none':
-            self.scheduler = None
-        else:
-            raise ValueError(f"Unknown scheduler: {self.config.scheduler}")
-    
-    def train(self, train_loader: DataLoader, val_loader: Optional[DataLoader] = None) -> Dict[str, List[float]]:
+        # Training state
+        self.current_epoch = 0
+        self.best_val_loss = float('inf')
+        self.patience_counter = 0
+        
+        # Logging
+        self.train_losses = []
+        self.val_losses = []
+        
+        # Checkpoint directory
+        self.checkpoint_dir = Path(checkpoint_dir)
+        self.checkpoint_dir.mkdir(exist_ok=True)
+        
+        # Setup logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+        
+    def train_epoch(self, train_loader: DataLoader) -> Dict[str, float]:
         """
-        Train the model.
+        Train for one epoch.
         
         Args:
             train_loader: Training data loader
-            val_loader: Validation data loader (optional)
             
         Returns:
-            Training history dictionary
+            Dictionary of training metrics
         """
-        logger.info("Starting model training...")
-        
-        # Create optimizer and scheduler
-        self._create_optimizer()
-        self._create_scheduler()
-        
-        # Create checkpoint directory
-        Path(self.config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
-        
-        # Training loop
-        for epoch in range(self.config.n_epochs):
-            epoch_start_time = time.time()
-            
-            # Training phase
-            train_metrics = self._train_epoch(train_loader, epoch)
-            
-            # Validation phase
-            val_metrics = {}
-            if val_loader is not None and epoch % self.config.validate_every == 0:
-                val_metrics = self._validate_epoch(val_loader, epoch)
-            
-            # Update learning rate
-            if self.scheduler is not None:
-                if self.config.scheduler == 'reduce_on_plateau' and val_metrics:
-                    self.scheduler.step(val_metrics['loss'])
-                else:
-                    self.scheduler.step()
-            
-            # Update history
-            self.history['train_loss'].append(train_metrics['loss'])
-            if val_metrics:
-                self.history['val_loss'].append(val_metrics['loss'])
-                self.history['val_accuracy'].append(val_metrics['accuracy'])
-                self.history['val_f1_score'].append(val_metrics.get('f1_score', 0.0))
-                self.history['val_uncertainty'].append(val_metrics.get('avg_uncertainty', 0.0))
-                self.history['val_calibration_error'].append(val_metrics.get('calibration_error', 0.0))
-            
-            self.history['learning_rate'].append(self.optimizer.param_groups[0]['lr'])
-            
-            # Checkpointing
-            if epoch % self.config.save_checkpoint_every == 0:
-                self.checkpoint_manager.save(
-                    model=self.model,
-                    optimizer=self.optimizer,
-                    scheduler=self.scheduler,
-                    epoch=epoch,
-                    metrics=val_metrics or train_metrics,
-                    config=self.config.to_dict()
-                )
-            
-            # Early stopping
-            if val_metrics and self.early_stopping.should_stop(val_metrics['loss']):
-                logger.info(f"Early stopping triggered at epoch {epoch}")
-                break
-            
-            # Logging
-            if epoch % self.config.log_every == 0:
-                epoch_time = time.time() - epoch_start_time
-                log_msg = f"Epoch {epoch}/{self.config.n_epochs} ({epoch_time:.2f}s) - "
-                log_msg += f"Train Loss: {train_metrics['loss']:.4f}"
-                
-                if val_metrics:
-                    log_msg += f", Val Loss: {val_metrics['loss']:.4f}"
-                    log_msg += f", Val Acc: {val_metrics['accuracy']:.4f}"
-                    if 'avg_uncertainty' in val_metrics:
-                        log_msg += f", Val Uncertainty: {val_metrics['avg_uncertainty']:.4f}"
-                
-                logger.info(log_msg)
-        
-        # Final calibration
-        if self.config.calibrate_uncertainty and val_loader is not None:
-            logger.info("Performing final uncertainty calibration...")
-            self._calibrate_model(val_loader)
-        
-        # Save final model
-        self.checkpoint_manager.save(
-            model=self.model,
-            optimizer=self.optimizer,
-            scheduler=self.scheduler,
-            epoch=epoch,
-            metrics=val_metrics or train_metrics,
-            config=self.config.to_dict(),
-            is_final=True
-        )
-        
-        logger.info("Training completed!")
-        return self.history
-    
-    def _train_epoch(self, train_loader: DataLoader, epoch: int) -> Dict[str, float]:
-        """Train for one epoch."""
         self.model.train()
+        self.uncertainty_quantifier.train()
         
-        total_loss = 0.0
-        n_batches = 0
+        epoch_losses = []
+        epoch_metrics = {
+            'total_loss': 0.0,
+            'ce_loss': 0.0,
+            'diversity_loss': 0.0,
+            'uncertainty_loss': 0.0
+        }
         
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=False)
+        progress_bar = tqdm(train_loader, desc=f"Epoch {self.current_epoch}")
         
-        for batch_idx, (sequences, queries, targets) in enumerate(pbar):
-            sequences = sequences.to(self.device)
-            queries = queries.to(self.device)
-            targets = targets.to(self.device)
+        for batch_idx, (cont_features, cat_features, labels) in enumerate(progress_bar):
+            # Move to device
+            cont_features = cont_features.to(self.device)
+            cat_features = cat_features.to(self.device)
+            labels = labels.to(self.device)
             
+            # Zero gradients
             self.optimizer.zero_grad()
             
             # Forward pass
-            if isinstance(self.model, BayesianEnsembleIDS):
-                logits, epistemic_uncertainty = self.model(sequences, queries)
-                
-                # Compute loss with uncertainty regularization
-                classification_loss = self.criterion(logits, targets)
-                
-                # Ensemble diversity regularization
-                diversity_loss = self._compute_diversity_loss()
-                
-                # Uncertainty regularization
-                uncertainty_reg = torch.mean(epistemic_uncertainty) * self.config.uncertainty_regularization_weight
-                
-                total_loss_batch = (
-                    classification_loss + 
-                    diversity_loss * self.config.ensemble_diversity_weight +
-                    uncertainty_reg
-                )
-            else:
-                logits, _ = self.model(sequences, queries)
-                total_loss_batch = self.criterion(logits, targets)
+            ensemble_logits, _, individual_logits = self.model(
+                cont_features, cat_features, return_individual=True
+            )
+            
+            # Uncertainty quantification
+            predictions, epistemic_unc, aleatoric_unc, total_unc, ensemble_probs = \
+                self.uncertainty_quantifier(ensemble_logits, individual_logits)
+            
+            # Compute loss
+            loss, loss_dict = self.criterion(
+                ensemble_logits, individual_logits, labels, total_unc, predictions
+            )
             
             # Backward pass
-            total_loss_batch.backward()
+            loss.backward()
             
-            # Gradient clipping
-            if self.config.gradient_clip_norm > 0:
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), 
-                    self.config.gradient_clip_norm
-                )
+            # Gradient clipping for stability
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(self.uncertainty_quantifier.parameters(), max_norm=1.0)
             
+            # Update parameters
             self.optimizer.step()
             
-            total_loss += total_loss_batch.item()
-            n_batches += 1
+            # Update metrics
+            for key, value in loss_dict.items():
+                epoch_metrics[key] += value
             
             # Update progress bar
-            pbar.set_postfix({'loss': total_loss_batch.item()})
+            progress_bar.set_postfix({
+                'Loss': f"{loss.item():.4f}",
+                'CE': f"{loss_dict['ce_loss']:.4f}",
+                'Div': f"{loss_dict['diversity_loss']:.4f}",
+                'Unc': f"{loss_dict['uncertainty_loss']:.4f}"
+            })
         
-        return {'loss': total_loss / n_batches}
+        # Average metrics over epoch
+        num_batches = len(train_loader)
+        for key in epoch_metrics:
+            epoch_metrics[key] /= num_batches
+        
+        return epoch_metrics
     
-    def _validate_epoch(self, val_loader: DataLoader, epoch: int) -> Dict[str, float]:
-        """Validate for one epoch."""
+    def validate(self, val_loader: DataLoader) -> Dict[str, float]:
+        """
+        Validate model.
+        
+        Args:
+            val_loader: Validation data loader
+            
+        Returns:
+            Dictionary of validation metrics
+        """
         self.model.eval()
+        self.uncertainty_quantifier.eval()
+        
+        val_metrics = {
+            'total_loss': 0.0,
+            'ce_loss': 0.0,
+            'diversity_loss': 0.0,
+            'uncertainty_loss': 0.0,
+            'accuracy': 0.0,
+            'precision': 0.0,
+            'recall': 0.0,
+            'f1_score': 0.0
+        }
         
         all_predictions = []
-        all_probabilities = []
-        all_uncertainties = []
-        all_confidences = []
-        all_targets = []
-        total_loss = 0.0
-        n_batches = 0
+        all_labels = []
+        all_probs = []
         
         with torch.no_grad():
-            pbar = tqdm(val_loader, desc=f"Epoch {epoch} [Val]", leave=False)
-            
-            for sequences, queries, targets in pbar:
-                sequences = sequences.to(self.device)
-                queries = queries.to(self.device)
-                targets = targets.to(self.device)
+            for cont_features, cat_features, labels in tqdm(val_loader, desc="Validation"):
+                # Move to device
+                cont_features = cont_features.to(self.device)
+                cat_features = cat_features.to(self.device)
+                labels = labels.to(self.device)
                 
-                # Get predictions with uncertainty
-                results = self.model.predict_with_uncertainty(sequences, queries)
+                # Forward pass
+                ensemble_logits, _, individual_logits = self.model(
+                    cont_features, cat_features, return_individual=True
+                )
+                
+                # Uncertainty quantification
+                predictions, epistemic_unc, aleatoric_unc, total_unc, ensemble_probs = \
+                    self.uncertainty_quantifier(ensemble_logits, individual_logits)
                 
                 # Compute loss
-                if isinstance(self.model, BayesianEnsembleIDS):
-                    logits, _ = self.model(sequences, queries)
-                else:
-                    logits, _ = self.model(sequences, queries)
+                loss, loss_dict = self.criterion(
+                    ensemble_logits, individual_logits, labels, total_unc, predictions
+                )
                 
-                loss = self.criterion(logits, targets)
-                total_loss += loss.item()
-                n_batches += 1
+                # Update metrics
+                for key, value in loss_dict.items():
+                    val_metrics[key] += value
                 
-                # Collect results
-                all_predictions.extend(results['predictions'].cpu().numpy())
-                all_probabilities.extend(results['probabilities'].cpu().numpy())
-                all_confidences.extend(results['confidence'].cpu().numpy())
-                all_targets.extend(targets.cpu().numpy())
-                
-                if 'total_uncertainty' in results:
-                    all_uncertainties.extend(results['total_uncertainty'].cpu().numpy())
+                # Collect predictions for metrics
+                all_predictions.extend(predictions.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+                all_probs.extend(ensemble_probs.cpu().numpy())
         
-        # Convert to numpy arrays
+        # Average losses
+        num_batches = len(val_loader)
+        for key in ['total_loss', 'ce_loss', 'diversity_loss', 'uncertainty_loss']:
+            val_metrics[key] /= num_batches
+        
+        # Compute classification metrics
         all_predictions = np.array(all_predictions)
-        all_probabilities = np.array(all_probabilities)
-        all_confidences = np.array(all_confidences)
-        all_targets = np.array(all_targets)
+        all_labels = np.array(all_labels)
         
-        # Compute metrics
-        accuracy = (all_predictions == all_targets).mean()
+        accuracy = (all_predictions == all_labels).mean()
         
-        # Compute F1 score
-        from sklearn.metrics import f1_score
-        f1 = f1_score(all_targets, all_predictions, average='weighted', zero_division=0)
+        # Binary classification metrics
+        tp = ((all_predictions == 1) & (all_labels == 1)).sum()
+        fp = ((all_predictions == 1) & (all_labels == 0)).sum()
+        fn = ((all_predictions == 0) & (all_labels == 1)).sum()
         
-        metrics = {
-            'loss': total_loss / n_batches,
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        
+        val_metrics.update({
             'accuracy': accuracy,
-            'f1_score': f1,
-        }
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1_score
+        })
         
-        # Add uncertainty metrics if available
-        if all_uncertainties:
-            all_uncertainties = np.array(all_uncertainties)
-            metrics['avg_uncertainty'] = np.mean(all_uncertainties)
+        return val_metrics
+    
+    def train(
+        self,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        num_epochs: int = 100,
+        patience: int = 10,
+        save_best: bool = True
+    ) -> Dict[str, List[float]]:
+        """
+        Full training loop.
+        
+        Args:
+            train_loader: Training data loader
+            val_loader: Validation data loader
+            num_epochs: Maximum number of epochs
+            patience: Early stopping patience
+            save_best: Whether to save best model
             
-            # Compute calibration error
-            correctness = (all_predictions == all_targets).astype(float)
-            calibration_error = self.calibrator.compute_calibration_error(
-                all_confidences, correctness
-            )['expected_calibration_error']
-            metrics['calibration_error'] = calibration_error
+        Returns:
+            Training history
+        """
+        self.logger.info(f"Starting training for {num_epochs} epochs")
         
-        return metrics
-    
-    def _compute_diversity_loss(self) -> torch.Tensor:
-        """Compute ensemble diversity loss."""
-        if not isinstance(self.model, BayesianEnsembleIDS):
-            return torch.tensor(0.0, device=self.device)
-        
-        # Simple diversity loss based on parameter differences
-        diversity_loss = 0.0
-        n_pairs = 0
-        
-        for i in range(len(self.model.ensemble_models)):
-            for j in range(i + 1, len(self.model.ensemble_models)):
-                model_i = self.model.ensemble_models[i]
-                model_j = self.model.ensemble_models[j]
-                
-                # Compute parameter similarity
-                similarity = 0.0
-                n_params = 0
-                
-                for p1, p2 in zip(model_i.parameters(), model_j.parameters()):
-                    if p1.shape == p2.shape:
-                        similarity += torch.sum((p1 - p2) ** 2)
-                        n_params += p1.numel()
-                
-                if n_params > 0:
-                    diversity_loss += torch.exp(-similarity / n_params)
-                    n_pairs += 1
-        
-        return diversity_loss / n_pairs if n_pairs > 0 else torch.tensor(0.0, device=self.device)
-    
-    def _calibrate_model(self, val_loader: DataLoader):
-        """Calibrate model uncertainty on validation data."""
-        self.model.eval()
-        
-        all_logits = []
-        all_targets = []
-        
-        with torch.no_grad():
-            for sequences, queries, targets in val_loader:
-                sequences = sequences.to(self.device)
-                queries = queries.to(self.device)
-                targets = targets.to(self.device)
-                
-                if isinstance(self.model, BayesianEnsembleIDS):
-                    logits, _ = self.model(sequences, queries)
-                else:
-                    logits, _ = self.model(sequences, queries)
-                
-                all_logits.append(logits)
-                all_targets.append(targets)
-        
-        all_logits = torch.cat(all_logits, dim=0)
-        all_targets = torch.cat(all_targets, dim=0)
-        
-        # Fit calibrator
-        self.calibrator.fit(all_logits, all_targets)
-        
-        # Apply calibration to ensemble if applicable
-        if isinstance(self.model, BayesianEnsembleIDS):
-            # Update temperature parameter
-            if hasattr(self.calibrator.calibrator, 'temperature'):
-                self.model.temperature.data = self.calibrator.calibrator.temperature.data
-    
-    def save_model(self, filepath: str, include_optimizer: bool = False):
-        """Save trained model."""
-        save_dict = {
-            'model_state_dict': self.model.state_dict(),
-            'model_config': self.config.model_params,
-            'training_config': self.config.to_dict(),
-            'history': self.history,
-            'model_class': self.model.__class__.__name__,
+        history = {
+            'train_loss': [],
+            'val_loss': [],
+            'val_accuracy': [],
+            'val_f1_score': []
         }
         
-        if include_optimizer and self.optimizer is not None:
-            save_dict['optimizer_state_dict'] = self.optimizer.state_dict()
+        for epoch in range(num_epochs):
+            self.current_epoch = epoch
+            
+            # Training
+            train_metrics = self.train_epoch(train_loader)
+            
+            # Validation
+            val_metrics = self.validate(val_loader)
+            
+            # Update history
+            history['train_loss'].append(train_metrics['total_loss'])
+            history['val_loss'].append(val_metrics['total_loss'])
+            history['val_accuracy'].append(val_metrics['accuracy'])
+            history['val_f1_score'].append(val_metrics['f1_score'])
+            
+            # Logging
+            self.logger.info(
+                f"Epoch {epoch}: "
+                f"Train Loss: {train_metrics['total_loss']:.4f}, "
+                f"Val Loss: {val_metrics['total_loss']:.4f}, "
+                f"Val Acc: {val_metrics['accuracy']:.4f}, "
+                f"Val F1: {val_metrics['f1_score']:.4f}"
+            )
+            
+            # Early stopping and model saving
+            if val_metrics['total_loss'] < self.best_val_loss:
+                self.best_val_loss = val_metrics['total_loss']
+                self.patience_counter = 0
+                
+                if save_best:
+                    self.save_checkpoint('best_model.pth', val_metrics)
+            else:
+                self.patience_counter += 1
+                
+            if self.patience_counter >= patience:
+                self.logger.info(f"Early stopping at epoch {epoch}")
+                break
         
-        if hasattr(self, 'calibrator') and self.calibrator.fitted:
-            save_dict['calibrator'] = self.calibrator
-        
-        torch.save(save_dict, filepath)
-        logger.info(f"Model saved to {filepath}")
+        return history
     
-    def load_model(self, filepath: str, load_optimizer: bool = False):
-        """Load trained model."""
-        checkpoint = torch.load(filepath, map_location=self.device)
+    def save_checkpoint(self, filename: str, metrics: Optional[Dict] = None):
+        """Save model checkpoint."""
+        checkpoint = {
+            'epoch': self.current_epoch,
+            'model_state_dict': self.model.state_dict(),
+            'uncertainty_quantifier_state_dict': self.uncertainty_quantifier.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'best_val_loss': self.best_val_loss,
+            'metrics': metrics
+        }
         
-        # Load model state
+        torch.save(checkpoint, self.checkpoint_dir / filename)
+        self.logger.info(f"Checkpoint saved: {filename}")
+    
+    def load_checkpoint(self, filename: str):
+        """Load model checkpoint."""
+        checkpoint = torch.load(self.checkpoint_dir / filename, map_location=self.device)
+        
         self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.uncertainty_quantifier.load_state_dict(checkpoint['uncertainty_quantifier_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.current_epoch = checkpoint['epoch']
+        self.best_val_loss = checkpoint['best_val_loss']
         
-        # Load training history
-        if 'history' in checkpoint:
-            self.history = checkpoint['history']
+        self.logger.info(f"Checkpoint loaded: {filename}")
         
-        # Load optimizer if requested
-        if load_optimizer and 'optimizer_state_dict' in checkpoint:
-            if self.optimizer is None:
-                self._create_optimizer()
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
-        # Load calibrator
-        if 'calibrator' in checkpoint:
-            self.calibrator = checkpoint['calibrator']
-        
-        logger.info(f"Model loaded from {filepath}")
-    
-    def evaluate(self, test_loader: DataLoader) -> Dict[str, Any]:
-        """Evaluate model on test data."""
-        logger.info("Evaluating model...")
-        
-        self.model.eval()
-        
-        all_predictions = []
-        all_probabilities = []
-        all_uncertainties = []
-        all_confidences = []
-        all_targets = []
-        
-        with torch.no_grad():
-            for sequences, queries, targets in tqdm(test_loader, desc="Evaluating"):
-                sequences = sequences.to(self.device)
-                queries = queries.to(self.device)
-                
-                results = self.model.predict_with_uncertainty(sequences, queries)
-                
-                all_predictions.extend(results['predictions'].cpu().numpy())
-                all_probabilities.extend(results['probabilities'].cpu().numpy())
-                all_confidences.extend(results['confidence'].cpu().numpy())
-                all_targets.extend(targets.numpy())
-                
-                if 'total_uncertainty' in results:
-                    all_uncertainties.extend(results['total_uncertainty'].cpu().numpy())
-        
-        # Convert to numpy arrays
-        all_predictions = np.array(all_predictions)
-        all_probabilities = np.array(all_probabilities)
-        all_confidences = np.array(all_confidences)
-        all_targets = np.array(all_targets)
-        
-        # Comprehensive evaluation
-        evaluation_results = self.evaluator.evaluate_model(
-            y_true=all_targets,
-            y_pred=all_predictions,
-            y_prob=all_probabilities,
-            uncertainties=np.array(all_uncertainties) if all_uncertainties else None,
-            confidences=all_confidences
-        )
-        
-        logger.info("Evaluation completed!")
-        return evaluation_results
+        return checkpoint.get('metrics', {})

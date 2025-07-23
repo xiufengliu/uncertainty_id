@@ -64,8 +64,8 @@ pip install uncertainty-ids
 ### Install from Source
 
 ```bash
-git clone https://github.com/your-username/uncertainty-ids.git
-cd uncertainty-ids
+git clone https://github.com/xiuli/IntrDetection.git
+cd IntrDetection
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -73,9 +73,9 @@ pip install -e .
 ### Development Installation
 
 ```bash
-git clone https://github.com/your-username/uncertainty-ids.git
-cd uncertainty-ids
-pip install -r requirements-dev.txt
+git clone https://github.com/xiuli/IntrDetection.git
+cd IntrDetection
+pip install -r requirements.txt
 pip install -e .
 ```
 
