@@ -63,7 +63,6 @@ class ComprehensiveExperimentFramework:
                 "traditional_ml": ["RandomForest", "SVM", "LogisticRegression"],
                 "deep_learning": ["MLP", "LSTM", "CNN"],
                 "uncertainty_aware": ["MCDropout", "DeepEnsemble", "VariationalInference", "EvidentialLearning"],
-                "meta_learning": ["MAML", "PrototypicalNetworks", "MatchingNetworks"],
                 "our_variants": ["SingleTransformer", "BayesianEnsembleTransformer"]
             },
             "ensemble_sizes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
