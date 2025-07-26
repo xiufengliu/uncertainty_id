@@ -89,19 +89,24 @@ class UncertaintyAwareTrainer:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         
-    def train_epoch(self, train_loader: DataLoader) -> Dict[str, float]:
+    def train_epoch(self, train_loader: DataLoader, epoch: int = None) -> Dict[str, float]:
         """
         Train for one epoch.
-        
+
         Args:
             train_loader: Training data loader
-            
+            epoch: Optional epoch number for progress bar display
+
         Returns:
             Dictionary of training metrics
         """
         self.model.train()
         self.uncertainty_quantifier.train()
-        
+
+        # Update current epoch if provided
+        if epoch is not None:
+            self.current_epoch = epoch
+
         epoch_losses = []
         epoch_metrics = {
             'total_loss': 0.0,
@@ -109,7 +114,7 @@ class UncertaintyAwareTrainer:
             'diversity_loss': 0.0,
             'uncertainty_loss': 0.0
         }
-        
+
         progress_bar = tqdm(train_loader, desc=f"Epoch {self.current_epoch}")
         
         for batch_idx, (cont_features, cat_features, labels) in enumerate(progress_bar):
