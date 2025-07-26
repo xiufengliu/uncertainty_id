@@ -106,7 +106,11 @@ class ComprehensiveExperimentFramework:
         
         # 4. Ablation Studies (Tables 4-5, Figures 2-3)
         print("\n🔬 Running Ablation Studies...")
-        self.run_ablation_studies()
+        try:
+            self.run_ablation_studies()
+        except Exception as e:
+            print(f"⚠️ Warning: Ablation studies failed with error: {e}")
+            print("Continuing with remaining experiments...")
         
         # 5. ICL Experiments (Table 7, Figure 6)
         print("\n🧠 Running In-Context Learning Experiments...")
@@ -986,7 +990,11 @@ class ComprehensiveExperimentFramework:
         self.run_loss_component_analysis()
 
         # 4. Calibration method comparison
-        self.run_calibration_comparison()
+        try:
+            self.run_calibration_comparison()
+        except Exception as e:
+            print(f"⚠️ Warning: Calibration comparison failed with error: {e}")
+            print("Continuing with remaining experiments...")
 
     def run_ensemble_size_analysis(self):
         """Analyze effect of ensemble size (Figure 2)."""
@@ -1257,7 +1265,8 @@ class ComprehensiveExperimentFramework:
         calibrated_probs = test_probs.clone()
         max_indices = torch.argmax(test_probs, dim=1)
         for i, (max_idx, cal_score) in enumerate(zip(max_indices, calibrated_scores)):
-            calibrated_probs[i, max_idx] = cal_score
+            # Convert numpy float to torch tensor
+            calibrated_probs[i, max_idx] = torch.tensor(float(cal_score), dtype=calibrated_probs.dtype, device=calibrated_probs.device)
             # Normalize to ensure probabilities sum to 1
             calibrated_probs[i] = calibrated_probs[i] / calibrated_probs[i].sum()
 
