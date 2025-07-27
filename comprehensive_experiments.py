@@ -2120,69 +2120,69 @@ class ComprehensiveExperimentFramework:
             for epoch in range(3):
                 trainer.train_epoch(train_loader, epoch=epoch)
 
-        # Collect attention weights from real model
-        model.eval()
-        all_attention_weights = []
+            # Collect attention weights from real model
+            model.eval()
+            all_attention_weights = []
 
-        with torch.no_grad():
-            for i, (cont_features, cat_features, labels) in enumerate(test_loader):
-                cont_features = cont_features.to(self.device)
-                cat_features = cat_features.to(self.device)
+            with torch.no_grad():
+                for i, (cont_features, cat_features, labels) in enumerate(test_loader):
+                    cont_features = cont_features.to(self.device)
+                    cat_features = cat_features.to(self.device)
 
-                # Get attention weights from model
-                logits, attention_weights, _ = model(cont_features, cat_features, return_attention=True)
+                    # Get attention weights from model
+                    logits, attention_weights, _ = model(cont_features, cat_features, return_attention=True)
 
-                # Extract attention weights (average across ensemble and heads)
-                if attention_weights is not None and len(attention_weights) > 0:
-                    # Average attention across ensemble members and heads
-                    avg_attention = torch.stack(attention_weights).mean(dim=0)  # Average across ensemble
-                    if len(avg_attention.shape) > 3:  # If multi-head
-                        avg_attention = avg_attention.mean(dim=1)  # Average across heads
+                    # Extract attention weights (average across ensemble and heads)
+                    if attention_weights is not None and len(attention_weights) > 0:
+                        # Average attention across ensemble members and heads
+                        avg_attention = torch.stack(attention_weights).mean(dim=0)  # Average across ensemble
+                        if len(avg_attention.shape) > 3:  # If multi-head
+                            avg_attention = avg_attention.mean(dim=1)  # Average across heads
 
-                    # Take first batch sample and average across sequence length
-                    if len(avg_attention.shape) > 2:
-                        sample_attention = avg_attention[0].mean(dim=0)  # Average across sequence
-                    else:
-                        sample_attention = avg_attention[0]
+                        # Take first batch sample and average across sequence length
+                        if len(avg_attention.shape) > 2:
+                            sample_attention = avg_attention[0].mean(dim=0)  # Average across sequence
+                        else:
+                            sample_attention = avg_attention[0]
 
-                    all_attention_weights.append(sample_attention.cpu().numpy())
+                        all_attention_weights.append(sample_attention.cpu().numpy())
 
-                # Collect enough samples
-                if len(all_attention_weights) >= 100:
-                    break
+                    # Collect enough samples
+                    if len(all_attention_weights) >= 100:
+                        break
 
-        if not all_attention_weights:
-            print("Warning: No attention weights collected, using feature correlation instead")
-            # Fallback: compute feature correlation matrix
-            all_features = []
-            for cont_features, cat_features, labels in test_loader:
-                features = torch.cat([cont_features, cat_features.float()], dim=1)
-                all_features.append(features.numpy())
-                if len(all_features) >= 10:
-                    break
+            if not all_attention_weights:
+                print("Warning: No attention weights collected, using feature correlation instead")
+                # Fallback: compute feature correlation matrix
+                all_features = []
+                for cont_features, cat_features, labels in test_loader:
+                    features = torch.cat([cont_features, cat_features.float()], dim=1)
+                    all_features.append(features.numpy())
+                    if len(all_features) >= 10:
+                        break
 
-            if all_features:
-                feature_matrix = np.concatenate(all_features, axis=0)
-                correlation_matrix = np.corrcoef(feature_matrix.T)
-                n_features = min(20, correlation_matrix.shape[0])  # Limit to 20 features for visualization
-                correlation_matrix = correlation_matrix[:n_features, :n_features]
+                if all_features:
+                    feature_matrix = np.concatenate(all_features, axis=0)
+                    correlation_matrix = np.corrcoef(feature_matrix.T)
+                    n_features = min(20, correlation_matrix.shape[0])  # Limit to 20 features for visualization
+                    correlation_matrix = correlation_matrix[:n_features, :n_features]
+                else:
+                    # Last resort: identity matrix
+                    n_features = 20
+                    correlation_matrix = np.eye(n_features)
             else:
-                # Last resort: identity matrix
-                n_features = 20
-                correlation_matrix = np.eye(n_features)
-        else:
-            # Compute correlation matrix from attention weights
-            attention_matrix = np.array(all_attention_weights)
-            correlation_matrix = np.corrcoef(attention_matrix.T)
+                # Compute correlation matrix from attention weights
+                attention_matrix = np.array(all_attention_weights)
+                correlation_matrix = np.corrcoef(attention_matrix.T)
 
-            # Handle case where correlation_matrix might be a scalar or 1D
-            if correlation_matrix.ndim == 0:
-                correlation_matrix = np.array([[1.0]])
-            elif correlation_matrix.ndim == 1:
-                correlation_matrix = correlation_matrix.reshape(1, 1)
+                # Handle case where correlation_matrix might be a scalar or 1D
+                if correlation_matrix.ndim == 0:
+                    correlation_matrix = np.array([[1.0]])
+                elif correlation_matrix.ndim == 1:
+                    correlation_matrix = correlation_matrix.reshape(1, 1)
 
-            n_features = min(20, correlation_matrix.shape[0])
-            correlation_matrix = correlation_matrix[:n_features, :n_features]
+                n_features = min(20, correlation_matrix.shape[0])
+                correlation_matrix = correlation_matrix[:n_features, :n_features]
 
             plt.figure(figsize=(10, 8))
             sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', center=0.0,
