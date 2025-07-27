@@ -1933,13 +1933,16 @@ class ComprehensiveExperimentFramework:
                 labels = labels.to(self.device)
 
                 # Get predictions and uncertainties
-                logits, ensemble_outputs, attention_weights = model(cont_features, cat_features)
-                predictions = torch.argmax(logits, dim=1)
+                ensemble_logits, attention_weights, individual_logits = model(
+                    cont_features, cat_features, return_individual=True
+                )
+                predictions = torch.argmax(ensemble_logits, dim=1)
 
                 # Calculate uncertainties using our uncertainty quantifier
-                uncertainties = uncertainty_quantifier.compute_uncertainty(
-                    ensemble_outputs, attention_weights
+                pred_out, epistemic_unc, aleatoric_unc, total_unc, ensemble_probs = uncertainty_quantifier(
+                    ensemble_logits, individual_logits
                 )
+                uncertainties = total_unc
 
                 # Separate by correctness
                 correct_mask = (predictions == labels)
@@ -2074,7 +2077,7 @@ class ComprehensiveExperimentFramework:
                 cat_features = cat_features.to(self.device)
 
                 # Get attention weights from model
-                logits, ensemble_outputs, attention_weights = model(cont_features, cat_features)
+                logits, attention_weights, _ = model(cont_features, cat_features, return_attention=True)
 
                 # Extract attention weights (average across ensemble and heads)
                 if attention_weights is not None and len(attention_weights) > 0:

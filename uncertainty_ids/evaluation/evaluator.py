@@ -342,9 +342,13 @@ class ModelEvaluator:
                 ensemble_logits, _, individual_preds = self.model(x_cont, x_cat, return_individual=True)
 
                 # Calculate uncertainties
-                uncertainties = self.uncertainty_quantifier.calculate_uncertainty(
-                    individual_preds, ensemble_logits
-                )
+                predictions, epistemic_unc, aleatoric_unc, total_unc, ensemble_probs = \
+                    self.uncertainty_quantifier(ensemble_logits, individual_preds)
+                uncertainties = {
+                    'epistemic_uncertainty': epistemic_unc,
+                    'aleatoric_uncertainty': aleatoric_unc,
+                    'total_uncertainty': total_unc
+                }
 
                 # Get probabilities and predictions
                 probabilities = torch.softmax(ensemble_logits, dim=-1)
