@@ -1949,9 +1949,9 @@ class ComprehensiveExperimentFramework:
                 incorrect_mask = ~correct_mask
 
                 if correct_mask.any():
-                    correct_uncertainties.extend(uncertainties['total_uncertainty'][correct_mask].cpu().numpy())
+                    correct_uncertainties.extend(uncertainties[correct_mask].cpu().numpy())
                 if incorrect_mask.any():
-                    incorrect_uncertainties.extend(uncertainties['total_uncertainty'][incorrect_mask].cpu().numpy())
+                    incorrect_uncertainties.extend(uncertainties[incorrect_mask].cpu().numpy())
 
                 # Limit data for efficiency
                 if len(correct_uncertainties) > 1000 and len(incorrect_uncertainties) > 300:
