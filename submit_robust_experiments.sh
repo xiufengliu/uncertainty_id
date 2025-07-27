@@ -7,9 +7,11 @@
 #BSUB -W 24:00
 #BSUB -o logs/comprehensive_experiments_robust_%J.out
 #BSUB -e logs/comprehensive_experiments_robust_%J.err
+#BSUB -u xiuli@dtu.dk
 #BSUB -N
 
-echo "🚀 Starting ROBUST Comprehensive Uncertainty-Aware Intrusion Detection Experiments"
+echo "🚀 Starting COMPREHENSIVE Uncertainty-Aware Intrusion Detection Experiments (FIXED VERSION)"
+echo "👤 Submitted by: Xiufeng Liu (xiuli@dtu.dk) - Senior Researcher at DTU"
 echo "📅 Job started at: $(date)"
 echo "🎯 This job will run ALL experiments with robust error handling:"
 echo "   - 4 datasets (NSL-KDD, CICIDS2017, UNSW-NB15, SWaT)"
