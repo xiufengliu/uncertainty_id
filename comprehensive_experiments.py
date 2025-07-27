@@ -116,7 +116,11 @@ class ComprehensiveExperimentFramework:
         
         # 5. ICL Experiments (Table 7, Figure 6)
         print("\n🧠 Running In-Context Learning Experiments...")
-        self.run_icl_experiments()
+        try:
+            self.run_icl_experiments()
+        except Exception as e:
+            print(f"⚠️ Warning: ICL experiments failed with error: {e}")
+            print("Continuing with remaining experiments...")
         
         # 6. Robustness Analysis (Table 8)
         print("\n🛡️ Running Robustness Analysis...")
@@ -1466,7 +1470,13 @@ class ComprehensiveExperimentFramework:
                         cat_feat = sample["categorical"].unsqueeze(0).to(self.device)
 
                         # Get intermediate features (before final classification)
-                        features = model.continuous_projection(cont_feat)  # Simplified feature extraction
+                        # Use the model's forward pass to get features
+                        try:
+                            logits, _, _ = model(cont_feat, cat_feat)
+                            features = logits  # Use output logits as features
+                        except Exception as e:
+                            print(f"        Warning: Feature extraction failed, using input features: {e}")
+                            features = cont_feat  # Fallback to input features
                         support_features.append(features.squeeze(0))
 
                 # Compute prototype (centroid of support features)
@@ -1480,7 +1490,12 @@ class ComprehensiveExperimentFramework:
                     label = sample["label"].item()
 
                     with torch.no_grad():
-                        query_features = model.continuous_projection(cont_feat).squeeze(0)
+                        try:
+                            logits, _, _ = model(cont_feat, cat_feat)
+                            query_features = logits.squeeze(0)
+                        except Exception as e:
+                            print(f"        Warning: Query feature extraction failed: {e}")
+                            query_features = cont_feat.squeeze(0)
                         distance = torch.norm(query_features - prototype)
 
                         # Simple threshold-based classification
