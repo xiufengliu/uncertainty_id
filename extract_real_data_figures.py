@@ -79,74 +79,86 @@ class RealDataExtractor:
     def generate_real_convergence_figure(self, training_data):
         """Generate convergence analysis figure using real training data"""
         print("📈 Generating convergence analysis with REAL data...")
-        
+
         if not training_data or len(training_data['epochs']) == 0:
             print("❌ No training data available for convergence analysis")
             return
-        
+
         # Convert to numpy arrays
         epochs = np.array(training_data['epochs'])
         losses = np.array(training_data['losses'])
         ce_losses = np.array(training_data['ce_losses'])
         uncertainties = np.array(training_data['uncertainties'])
-        
-        # Group by dataset for comparison
-        datasets = list(set(training_data['dataset_names']))
-        
+        diversities = np.array(training_data['diversities'])
+
+        # Create epoch-based grouping for convergence analysis
+        unique_epochs = sorted(list(set(epochs)))
+        epoch_losses = []
+        epoch_ce_losses = []
+        epoch_uncertainties = []
+        epoch_diversities = []
+
+        # Average metrics per epoch
+        for epoch in unique_epochs:
+            epoch_mask = epochs == epoch
+            epoch_losses.append(np.mean(losses[epoch_mask]))
+            epoch_ce_losses.append(np.mean(ce_losses[epoch_mask]))
+            epoch_uncertainties.append(np.mean(uncertainties[epoch_mask]))
+            epoch_diversities.append(np.mean(diversities[epoch_mask]))
+
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
-        
-        # Plot 1: Loss Convergence by Dataset
-        colors = plt.cm.tab10(np.linspace(0, 1, len(datasets)))
-        for i, dataset in enumerate(datasets):
-            if dataset == "Unknown":
-                continue
-            mask = np.array(training_data['dataset_names']) == dataset
-            dataset_epochs = epochs[mask]
-            dataset_losses = losses[mask]
-            
-            if len(dataset_epochs) > 0:
-                ax1.plot(dataset_epochs, dataset_losses, 'o-', 
-                        label=f'{dataset}', color=colors[i], alpha=0.7, markersize=2)
-        
+
+        # Plot 1: Training Loss Convergence by Epoch
+        ax1.plot(unique_epochs, epoch_losses, 'o-', color='blue', linewidth=2, markersize=4, label='Total Loss')
+        ax1.plot(unique_epochs, epoch_ce_losses, 's-', color='red', linewidth=2, markersize=4, label='Cross-Entropy Loss')
         ax1.set_xlabel('Epoch')
-        ax1.set_ylabel('Training Loss')
-        ax1.set_title('Real Training Loss Convergence by Dataset')
+        ax1.set_ylabel('Loss')
+        ax1.set_title('Real Training Loss Convergence')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
-        
-        # Plot 2: Cross-Entropy Loss Evolution
-        ax2.plot(range(len(ce_losses)), ce_losses, 'b-', alpha=0.6, linewidth=1)
-        ax2.set_xlabel('Training Step')
-        ax2.set_ylabel('Cross-Entropy Loss')
-        ax2.set_title('Real Cross-Entropy Loss Evolution')
+        ax1.set_yscale('log')  # Log scale to better show convergence
+
+        # Plot 2: Uncertainty Evolution by Epoch
+        ax2.plot(unique_epochs, epoch_uncertainties, 'o-', color='green', linewidth=2, markersize=4)
+        ax2.set_xlabel('Epoch')
+        ax2.set_ylabel('Uncertainty')
+        ax2.set_title('Real Uncertainty Evolution')
         ax2.grid(True, alpha=0.3)
-        
-        # Plot 3: Uncertainty Evolution
-        ax3.plot(range(len(uncertainties)), uncertainties, 'g-', alpha=0.6, linewidth=1)
-        ax3.set_xlabel('Training Step')
-        ax3.set_ylabel('Uncertainty')
-        ax3.set_title('Real Uncertainty Evolution')
+
+        # Plot 3: Diversity Evolution by Epoch
+        ax3.plot(unique_epochs, epoch_diversities, 'o-', color='purple', linewidth=2, markersize=4)
+        ax3.set_xlabel('Epoch')
+        ax3.set_ylabel('Diversity')
+        ax3.set_title('Real Diversity Evolution')
         ax3.grid(True, alpha=0.3)
-        
-        # Plot 4: Loss Distribution by Dataset
-        dataset_final_losses = {}
-        for dataset in datasets:
-            if dataset == "Unknown":
-                continue
-            mask = np.array(training_data['dataset_names']) == dataset
-            dataset_losses = losses[mask]
-            if len(dataset_losses) > 0:
-                dataset_final_losses[dataset] = np.mean(dataset_losses[-100:])  # Last 100 points
-        
-        if dataset_final_losses:
-            datasets_clean = list(dataset_final_losses.keys())
-            final_losses = list(dataset_final_losses.values())
-            bars = ax4.bar(datasets_clean, final_losses, alpha=0.7)
-            ax4.set_ylabel('Final Average Loss')
-            ax4.set_title('Real Final Loss by Dataset')
-            ax4.grid(True, alpha=0.3, axis='y')
-            plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
-        
+
+        # Plot 4: Training Progress Summary
+        # Show final convergence metrics
+        final_metrics = ['Total Loss', 'CE Loss', 'Uncertainty', 'Diversity']
+        final_values = [epoch_losses[-1], epoch_ce_losses[-1], epoch_uncertainties[-1], abs(epoch_diversities[-1])]
+
+        # Normalize values for comparison (0-1 scale)
+        normalized_values = []
+        for i, val in enumerate(final_values):
+            if i < 2:  # Losses (lower is better)
+                normalized_values.append(1 - min(1, val))  # Invert for losses
+            else:  # Uncertainty and diversity (higher can be better)
+                normalized_values.append(min(1, val))
+
+        colors = ['blue', 'red', 'green', 'purple']
+        bars = ax4.bar(final_metrics, normalized_values, color=colors, alpha=0.7)
+        ax4.set_ylabel('Normalized Performance (0-1)')
+        ax4.set_title('Real Final Training Metrics')
+        ax4.grid(True, alpha=0.3, axis='y')
+        plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
+
+        # Add actual values as text on bars
+        for i, (bar, val) in enumerate(zip(bars, final_values)):
+            height = bar.get_height()
+            ax4.annotate(f'{val:.4f}', xy=(bar.get_x() + bar.get_width()/2, height),
+                        xytext=(0, 3), textcoords="offset points",
+                        ha='center', va='bottom', fontsize=9)
+
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/convergence_analysis.pdf', dpi=300, bbox_inches='tight')
         plt.close()
