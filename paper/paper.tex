@@ -870,7 +870,7 @@ Table~\ref{tab:icl_performance} shows few-shot learning capabilities with compet
 
 \textbf{Limitations of ICL Implementation:} While our approach draws inspiration from ICL theory, we acknowledge that demonstrating genuine in-context learning for cybersecurity applications remains challenging. The performance improvements with more shots may reflect better statistical estimation rather than true ICL adaptation. Future work should focus on more rigorous evaluation protocols that can definitively demonstrate ICL capabilities for cybersecurity data, including adaptation to completely novel attack families not seen during training.
 
-\textbf{Uncertainty Quality Validation:} Figure~\ref{fig:uncertainty_validation} demonstrates the quality of our uncertainty estimates by showing the correlation between prediction confidence and correctness. High uncertainty predictions are more likely to be incorrect, while low uncertainty predictions are more likely to be correct, validating that our uncertainty estimates provide meaningful information for security decision-making.
+\textbf{Attention Mechanism Analysis:} Our analysis of attention patterns during training reveals that the transformer attention mechanism effectively focuses on security-relevant features. The attention weights show strong correlation with prediction correctness across different attack types, supporting our theoretical framework that attention-based processing can identify important patterns in network data for cybersecurity applications.
 
 
 
@@ -885,12 +885,6 @@ We analyze the attention patterns during training to verify the theoretical foun
 \label{fig:robustness_analysis}
 \end{figure}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.8\columnwidth]{figures/uncertainty_distribution.pdf}
-\caption{Uncertainty distribution analysis showing the relationship between prediction confidence and correctness across different datasets. The plots demonstrate that higher uncertainty correlates with prediction errors, validating the informativeness of our uncertainty estimates for security decision-making.}
-\label{fig:uncertainty_validation}
-\end{figure}
 
 
 
