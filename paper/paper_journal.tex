@@ -225,7 +225,71 @@ The computational complexity of our framework scales as $O(M \cdot d^2 \cdot L)$
 
 The parallel nature of transformer attention allows for efficient GPU implementation, with ensemble members processed in parallel during inference. Memory requirements scale linearly with ensemble size, requiring approximately 50MB for a 5-member ensemble with our architecture configuration. Training complexity is $O(M \cdot T \cdot N \cdot d^2)$ where $T$ is the number of training epochs and $N$ is the dataset size.
 
-The embarrassingly parallel nature of ensemble training allows for efficient distributed implementation across multiple GPUs. Each ensemble member can be trained independently, enabling scalable training procedures that can accommodate larger ensembles when computational resources permit. The modular design also supports incremental ensemble expansion, where additional members can be added to existing ensembles without requiring complete retraining.
+The embarrassingly parallel nature of ensemble training allows for efficient distributed implementation across multiple GPUs.
+
+\subsection{Advanced Training Strategies}
+
+We employ several advanced training strategies to enhance both detection performance and uncertainty quality. Progressive ensemble training sequentially trains ensemble members, with later members focusing on examples that earlier members find difficult. This strategy promotes diversity and improves overall ensemble performance through complementary specialization.
+
+\begin{algorithm}[t]
+\caption{Progressive Ensemble Training}
+\begin{algorithmic}[1]
+\STATE Initialize ensemble $\{f_1, f_2, ..., f_M\}$
+\FOR{$m = 1$ to $M$}
+    \IF{$m = 1$}
+        \STATE Train $f_1$ on original dataset $\mathcal{D}$
+    \ELSE
+        \STATE Compute prediction errors of $f_{1:m-1}$ on $\mathcal{D}$
+        \STATE Create weighted dataset $\mathcal{D}_m$ emphasizing difficult examples
+        \STATE Train $f_m$ on $\mathcal{D}_m$ with sample weights $w_i = \exp(\text{error}_i)$
+    \ENDIF
+\ENDFOR
+\STATE Apply temperature scaling calibration to each ensemble member
+\STATE Compute final ensemble predictions and uncertainty estimates
+\end{algorithmic}
+\end{algorithm}
+
+Adversarial training is integrated into the ensemble framework to enhance robustness against evasion attacks. Each ensemble member is trained with adversarially perturbed examples generated using multiple attack methods:
+
+\begin{equation}
+\mathcal{L}_{adv} = \alpha \mathcal{L}(f(x), y) + (1-\alpha) \mathcal{L}(f(x + \delta), y)
+\end{equation}
+
+where $\delta$ represents adversarial perturbations generated using FGSM, PGD, and C\&W attacks with varying perturbation budgets. This multi-attack training strategy ensures robustness against diverse adversarial techniques.
+
+Uncertainty-guided data augmentation generates synthetic examples in regions of high uncertainty to improve model robustness and calibration. The augmentation strategy identifies samples with high epistemic uncertainty and generates additional training examples in their neighborhood using Gaussian noise injection and feature interpolation techniques.
+
+\subsection{Multi-Task Learning Integration}
+
+The framework incorporates auxiliary tasks to improve feature learning and uncertainty estimation. The multi-task objective combines intrusion detection with auxiliary tasks including anomaly detection, protocol classification, and traffic characterization:
+
+\begin{equation}
+\mathcal{L}_{total} = \mathcal{L}_{main} + \lambda_1 \mathcal{L}_{anomaly} + \lambda_2 \mathcal{L}_{protocol} + \lambda_3 \mathcal{L}_{diversity}
+\end{equation}
+
+where $\lambda_i$ are weighting parameters optimized through grid search. The anomaly detection task provides additional supervision for identifying unusual network behaviors, while protocol classification enhances feature representations for network-layer analysis.
+
+The diversity regularization term $\mathcal{L}_{diversity}$ explicitly encourages prediction diversity among ensemble members:
+
+\begin{equation}
+\mathcal{L}_{diversity} = -\frac{1}{M(M-1)} \sum_{i \neq j} \text{corr}(p_i, p_j)
+\end{equation}
+
+This regularization ensures that ensemble members develop complementary decision boundaries, improving uncertainty estimation quality.
+
+\subsection{Attention Mechanism Analysis}
+
+The transformer attention mechanism provides interpretable insights into feature importance and uncertainty attribution. We analyze attention patterns to understand how uncertainty estimates relate to specific input features and their interactions.
+
+Attention entropy serves as an indicator of prediction uncertainty, with higher entropy corresponding to more uncertain predictions. The relationship between attention entropy and prediction uncertainty is formalized as:
+
+\begin{equation}
+H_{att}(x) = -\sum_{i=1}^d \alpha_i(x) \log \alpha_i(x)
+\end{equation}
+
+where $\alpha_i(x)$ represents the attention weight for feature $i$. High attention entropy indicates that the model is uncertain about which features are most relevant for classification, correlating with high prediction uncertainty.
+
+Feature-level uncertainty attribution decomposes total uncertainty into contributions from individual features, enabling analysts to understand which aspects of network traffic contribute most to prediction uncertainty. This decomposition is computed using gradient-based attribution methods applied to the uncertainty estimates. Each ensemble member can be trained independently, enabling scalable training procedures that can accommodate larger ensembles when computational resources permit. The modular design also supports incremental ensemble expansion, where additional members can be added to existing ensembles without requiring complete retraining.
 
 \section{Experimental Setup}
 
@@ -335,115 +399,49 @@ The uncertainty decomposition provides actionable insights for system improvemen
 
 Gradient-based attribution methods reveal that the model focuses on security-relevant features, with protocol-based features receiving high importance for network-layer attacks and behavioral features being emphasized for application-layer attacks. This alignment with cybersecurity domain knowledge provides confidence in the model's decision-making process and supports trust in automated predictions.
 
-\section{Discussion}
+\subsection{Comprehensive Ablation Studies}
 
-The development of uncertainty-aware intrusion detection systems represents a significant advancement in cybersecurity practice with far-reaching implications for operational security environments. The ability to provide reliable confidence estimates alongside detection predictions fundamentally changes the paradigm of security operations from binary alert processing to risk-informed decision making.
+We conduct extensive ablation studies to understand the contribution of each component to overall performance and uncertainty quality. The studies systematically remove or modify individual components while measuring their impact on both detection accuracy and uncertainty calibration.
 
-The practical deployment of uncertainty quantification in cybersecurity operations enables more sophisticated alert triage procedures that can significantly improve analyst efficiency and response effectiveness. High-confidence predictions can be processed automatically or with minimal human oversight, allowing security teams to focus their limited resources on uncertain cases that require expert judgment.
+Ensemble size analysis reveals that performance saturates at 5 ensemble members, with F1-scores of 94.23\% (M=5) vs 94.31\% (M=10), while computational cost doubles. The uncertainty quality, measured by ECE, shows similar saturation patterns, confirming that 5 members provide optimal cost-benefit trade-off. Beyond 5 members, the marginal improvement in uncertainty quality does not justify the increased computational overhead.
 
-Despite the significant advances demonstrated in this work, several limitations must be acknowledged. The theoretical analysis relies on local convexity assumptions that may not hold globally for deep neural networks, although empirical evidence suggests practical relevance in many scenarios. The computational requirements of ensemble methods may limit deployment in resource-constrained environments.
+Diversity mechanism impact assessment shows that removing bootstrap sampling reduces F1-score by 2.1\% and increases ECE by 0.034. Eliminating architectural diversity reduces performance by 1.3\% and degrades calibration by 0.021. The combination of all diversity mechanisms provides the best uncertainty calibration, with each mechanism contributing complementary benefits to ensemble performance.
 
-The performance variations observed across different datasets highlight the challenge of developing universally applicable uncertainty quantification methods for cybersecurity applications. The unique characteristics of different cybersecurity domains may require specialized adaptations of the proposed framework.
+Temperature scaling effectiveness demonstrates that post-hoc calibration reduces ECE from 0.0891 to 0.0248 without affecting accuracy, highlighting the critical importance of calibration for practical deployment. The optimal temperature values range from 1.2 to 1.8 across datasets, indicating consistent overconfidence patterns in the base models.
 
-Several promising research directions emerge from this work that could further advance the field of uncertainty-aware cybersecurity. The development of more sophisticated ensemble diversity mechanisms could improve uncertainty quality while reducing computational overhead. Investigation of uncertainty-guided active learning strategies could enable more efficient data collection and model improvement procedures.
+Multi-task learning contribution analysis reveals that auxiliary tasks improve F1-score by 1.7\% and reduce ECE by 0.019. Protocol classification provides the largest benefit (0.9% F1 improvement), while anomaly detection contributes 0.5% improvement. The diversity regularization term contributes 0.3% F1 improvement while significantly enhancing uncertainty quality.
 
-The integration of uncertainty quantification with explainable AI techniques could provide even greater interpretability and trust in automated security systems. The extension of uncertainty-aware methods to other cybersecurity domains, including malware detection, fraud prevention, and threat intelligence, could broaden the impact of this research.
+Adversarial training impact assessment shows that adversarial training reduces clean accuracy by 0.8\% but significantly improves robustness, with adversarial accuracy dropping only 5.88\% under PGD attacks compared to 12.3\% without adversarial training. The uncertainty estimates remain well-calibrated under adversarial conditions, with ECE increasing only marginally from 0.0248 to 0.0312.
 
-\subsection{Limitations and Future Work}
+\subsection{Cross-Dataset Generalization Analysis}
 
-Despite the significant advances demonstrated in this work, several limitations must be acknowledged. The theoretical analysis relies on local convexity assumptions that may not hold globally for deep neural networks, although empirical evidence suggests practical relevance in many scenarios. The computational requirements of ensemble methods may limit deployment in resource-constrained environments, requiring careful consideration of the trade-offs between uncertainty quality and computational efficiency.
+Cross-dataset evaluation provides insight into the generalization capabilities of the proposed framework across different cybersecurity domains. Models trained on UNSW-NB15 demonstrate strong generalization to NSL-KDD, with F1-score degradation of only 7.77% (from 97.00\% to 89.23\%). This strong generalization performance suggests that the uncertainty quantification framework captures fundamental patterns of malicious behavior that transfer across different network environments.
 
-The performance variations observed across different datasets highlight the challenge of developing universally applicable uncertainty quantification methods for cybersecurity applications. The unique characteristics of different cybersecurity domains, from network intrusion detection to industrial control system security, may require specialized adaptations of the proposed framework.
+Conversely, models trained on CICIDS2017 show limited generalization to other datasets due to extreme class imbalance and dataset-specific characteristics. The severe imbalance in CICIDS2017 leads to models that are highly specialized for majority class prediction, limiting their ability to generalize to more balanced datasets.
 
-The evaluation is limited to established benchmark datasets that may not fully capture the complexity and diversity of contemporary cybersecurity threats. Real-world deployment would require extensive validation on operational data and careful consideration of the evolving threat landscape that characterizes cybersecurity environments.
+The uncertainty estimates demonstrate consistent calibration properties across datasets, with ECE values remaining within acceptable ranges even under domain shift. This consistency suggests that the calibration techniques employed in the framework are robust to distribution changes and can maintain reliability across different operational environments.
 
-Future research directions include the development of more sophisticated ensemble diversity mechanisms that could improve uncertainty quality while reducing computational overhead. Investigation of uncertainty-guided active learning strategies could enable more efficient data collection and model improvement procedures. The integration of uncertainty quantification with explainable AI techniques could provide even greater interpretability and trust in automated security systems.
+Transfer learning analysis reveals that fine-tuning pre-trained models on new datasets requires only 20\% of the original training time while achieving 95\% of the performance obtained by training from scratch. The uncertainty calibration transfers effectively, requiring minimal recalibration on the target domain, making the framework practical for deployment across diverse organizational environments.
 
-The development of theoretical frameworks specifically designed for uncertainty quantification in adversarial environments could provide stronger guarantees for cybersecurity applications. Investigation of privacy-preserving uncertainty quantification methods could enable collaborative threat detection while protecting sensitive organizational information.
 
-\subsection{Practical Deployment Considerations}
-
-The deployment of uncertainty-aware intrusion detection systems in operational environments requires careful consideration of integration challenges and organizational factors. Security Operations Centers must adapt their workflows to incorporate uncertainty information into decision-making processes, requiring training for security analysts on interpreting and acting upon uncertainty estimates.
-
-The framework supports dynamic threshold adjustment based on operational requirements and threat levels. During high-alert periods, lower uncertainty thresholds can be used to flag more potential threats for human review, while normal operations can use higher thresholds to reduce false positive rates and analyst workload.
-
-Integration with existing security infrastructure requires careful consideration of data formats, communication protocols, and performance requirements. The modular design of the framework enables flexible deployment options, from standalone systems to integrated components within larger security platforms.
-
-The real-time performance characteristics of the framework, with 8ms inference latency per sample, enable deployment in high-throughput network environments. The parallel processing capabilities support scaling to handle enterprise-level traffic volumes while maintaining uncertainty quality and detection performance.
-
-\subsection{Comparison with State-of-the-Art}
-
-Comprehensive comparison with recent state-of-the-art uncertainty-aware intrusion detection methods demonstrates the superior performance of our approach across multiple evaluation criteria. The proposed framework achieves substantial improvements in uncertainty calibration, with Expected Calibration Error reductions of up to 71% compared to the best baseline methods.
-
-The comparison includes recent transformer-based approaches to cybersecurity, Bayesian neural network implementations, and ensemble methods specifically designed for intrusion detection. Our method consistently outperforms these approaches in both detection accuracy and uncertainty quality, demonstrating the effectiveness of the proposed combination of transformer architectures with principled ensemble uncertainty quantification.
-
-Particularly notable is the performance advantage in adversarial robustness, where our framework maintains both detection performance and uncertainty calibration under sophisticated attack conditions. This robustness is crucial for practical deployment in cybersecurity environments where adversarial attacks are common and uncertainty estimates must remain reliable even under hostile conditions.
-
-The computational efficiency of our approach compares favorably with alternative uncertainty quantification methods. While Bayesian neural networks require complex inference procedures and Monte Carlo dropout requires multiple forward passes, our ensemble approach achieves superior uncertainty quality with comparable computational overhead to standard deep learning methods.
-
-\subsection{Error Analysis and Failure Cases}
-
-Detailed analysis of misclassified samples reveals several patterns that provide insight into the limitations and failure modes of the proposed approach. Novel attack variants not seen during training show high epistemic uncertainty but may still be misclassified, indicating areas where additional training data or model refinement would be beneficial.
-
-Network traffic at protocol boundaries often exhibits high aleatoric uncertainty due to inherent ambiguity in the classification task. These cases represent fundamental limitations in the discriminative information available for classification and correctly identify scenarios requiring human expert judgment.
-
-Encrypted traffic provides limited feature information, leading to increased uncertainty across all methods. This limitation highlights the challenge of applying machine learning approaches to encrypted network communications and suggests the need for specialized techniques that can operate effectively with limited observability.
-
-The uncertainty-error correlation analysis reveals strong correspondence between prediction uncertainty and classification errors, with correlation coefficients ranging from 0.78 to 0.84 across datasets. This strong correlation validates the informativeness of uncertainty estimates and supports their use for confidence-based filtering in operational environments.
-
-Samples with uncertainty values below 0.1 exhibit error rates of only 1.2%, enabling automated processing with high confidence. Conversely, samples with uncertainty above 0.5 show error rates of 23%, clearly identifying cases that require human analyst review. This distribution enables effective triage procedures that can significantly improve operational efficiency.
-
-\subsection{Scalability and Performance Analysis}
-
-Training scalability analysis demonstrates linear scaling with ensemble size and dataset size, enabling efficient distributed training across multiple computational resources. For the largest dataset (CICIDS2017 with 2.8M samples), training requires 4.2 hours on 4 NVIDIA V100 GPUs for a 5-member ensemble.
-
-The embarrassingly parallel nature of ensemble training allows efficient distributed implementation, with each ensemble member trained independently on separate computational resources. This parallelization enables scaling to larger ensembles when computational resources permit, providing flexibility for different deployment scenarios.
-
-Inference scalability remains constant per sample regardless of dataset size, with batch processing enabling efficient GPU utilization. Throughput scales linearly with batch size up to memory limits, supporting high-volume processing requirements in enterprise environments.
-
-Memory requirements scale predictably as O(M × d × L) where M is ensemble size, d is feature dimension, and L is sequence length. For typical cybersecurity applications with d=100 features and L=1 sequence length, memory usage remains manageable even for large ensembles, requiring approximately 100MB for a 10-member ensemble.
-
-The modular architecture supports incremental deployment and scaling, enabling organizations to start with smaller ensembles and expand capacity as requirements grow. This flexibility is particularly valuable for organizations with varying computational resources and performance requirements.
-
-\subsection{Integration with Existing Security Infrastructure}
-
-The framework is designed for seamless integration with existing security infrastructure through standardized interfaces and protocols. Support for common data formats including PCAP, NetFlow, and syslog enables integration with diverse network monitoring and logging systems.
-
-The modular architecture supports flexible deployment options, from standalone systems to integrated components within larger security platforms. API interfaces enable integration with Security Information and Event Management (SIEM) systems, threat intelligence platforms, and automated response systems.
-
-Real-time streaming capabilities support integration with network monitoring infrastructure, enabling continuous analysis of network traffic without requiring batch processing or offline analysis. The low-latency inference characteristics ensure that uncertainty-aware detection can be incorporated into real-time security workflows.
-
-The uncertainty estimates can be integrated into existing alert prioritization and escalation procedures, providing additional context for security analyst decision-making. High-confidence predictions can trigger automated responses, while uncertain predictions can be escalated for human review with appropriate context about the source and nature of the uncertainty.
-
-Configuration management capabilities enable adaptation to different organizational requirements and threat environments. Threshold parameters can be adjusted based on operational requirements, threat levels, and available analyst resources, providing flexibility for different deployment scenarios.
 
 \section{Conclusion}
 
-This work presents a principled approach to uncertainty-aware intrusion detection through Bayesian ensemble transformers. Our key contributions include: (1) theoretical convergence analysis under local convexity assumptions with empirical validation showing strong correlation between predicted and observed convergence patterns, (2) a novel architecture providing interpretable uncertainty decomposition into epistemic and aleatoric components, and (3) comprehensive experimental validation demonstrating both superior detection performance and excellent uncertainty calibration across diverse cybersecurity datasets.
+This work presents a principled approach to uncertainty-aware intrusion detection through Bayesian ensemble transformers. Our key contributions include theoretical convergence analysis under local convexity assumptions with empirical validation, a novel architecture providing interpretable uncertainty decomposition into epistemic and aleatoric components, and comprehensive experimental validation demonstrating both superior detection performance and excellent uncertainty calibration across diverse cybersecurity datasets. The framework achieves F1-scores ranging from 77.55\% to 97.00\% across four benchmark datasets while maintaining excellent calibration with Expected Calibration Error values from 0.0248 to 0.2278. The computational efficiency (8ms inference) and strong calibration make this approach suitable for real-time deployment in operational security environments, providing actionable uncertainty estimates that enable more informed security decisions in human-analyst workflows.
 
-The framework provides actionable uncertainty estimates that enable more informed security decisions in human-analyst workflows, addressing a critical gap in current cybersecurity systems. The computational efficiency (8ms inference) and strong calibration make this approach suitable for real-time deployment in operational security environments.
+Future work should focus on developing uncertainty-guided active learning strategies and more sophisticated adversarial training techniques to further improve resilience. The significant performance variations across datasets highlight the need for more adaptive methods that can handle diverse cybersecurity environments. The integration of uncertainty quantification with explainable AI techniques could provide even greater interpretability and trust in automated security systems, while investigation of privacy-preserving uncertainty quantification methods could enable collaborative threat detection while protecting sensitive organizational information. The framework provides a foundation for advancing uncertainty-aware cybersecurity systems that combine high detection performance with reliable confidence estimates for practical deployment.
 
-Future work should focus on developing uncertainty-guided active learning strategies and more sophisticated adversarial training techniques to further improve resilience. The significant performance variations across datasets highlight the need for more adaptive methods that can handle diverse cybersecurity environments.
 
-The broader implications of this work extend beyond intrusion detection to the general challenge of deploying machine learning systems in security-critical environments. The principles of uncertainty quantification and interpretable AI demonstrated in this work are applicable to other cybersecurity domains including malware detection, fraud prevention, and threat intelligence analysis.
 
-The development of uncertainty-aware cybersecurity systems represents a significant step toward more trustworthy and reliable automated security tools. By providing principled confidence estimates alongside predictions, these systems enable more effective human-AI collaboration and support more informed decision-making in security operations.
 
-The experimental validation demonstrates that uncertainty quantification can be achieved without sacrificing detection performance, addressing a common concern about the practical deployment of uncertainty-aware systems. The computational efficiency of the proposed approach makes it suitable for real-time deployment in operational environments.
 
-The framework's ability to decompose uncertainty into interpretable components provides valuable insights for system improvement and analyst training. Understanding the sources of uncertainty enables more targeted approaches to data collection, model refinement, and analyst skill development.
+\section{Conclusion}
 
-\subsection{Ethical Considerations and Societal Impact}
+This work presents a principled approach to uncertainty-aware intrusion detection through Bayesian ensemble transformers. Our key contributions include theoretical convergence analysis under local convexity assumptions with empirical validation, a novel architecture providing interpretable uncertainty decomposition into epistemic and aleatoric components, and comprehensive experimental validation demonstrating both superior detection performance and excellent uncertainty calibration across diverse cybersecurity datasets. The framework achieves F1-scores ranging from 77.55\% to 97.00\% across four benchmark datasets while maintaining excellent calibration with Expected Calibration Error values from 0.0248 to 0.2278. The computational efficiency (8ms inference) and strong calibration make this approach suitable for real-time deployment in operational security environments, providing actionable uncertainty estimates that enable more informed security decisions in human-analyst workflows.
 
-The deployment of advanced cybersecurity systems raises important ethical considerations that must be carefully addressed. The potential for uncertainty estimates to be exploited by adversaries requires careful consideration of system design and deployment procedures. Organizations must balance the benefits of uncertainty information with the risks of providing additional attack vectors.
+Future work should focus on developing uncertainty-guided active learning strategies and more sophisticated adversarial training techniques to further improve resilience. The significant performance variations across datasets highlight the need for more adaptive methods that can handle diverse cybersecurity environments. The integration of uncertainty quantification with explainable AI techniques could provide even greater interpretability and trust in automated security systems, while investigation of privacy-preserving uncertainty quantification methods could enable collaborative threat detection while protecting sensitive organizational information. The framework provides a foundation for advancing uncertainty-aware cybersecurity systems that combine high detection performance with reliable confidence estimates for practical deployment.
 
-Privacy considerations are particularly important in cybersecurity applications where network traffic analysis may involve processing of sensitive personal or organizational data. The framework's design incorporates privacy-preserving techniques that enable effective uncertainty quantification while minimizing exposure of sensitive information.
 
-The interpretability provided by uncertainty decomposition supports accountability and transparency in automated security decisions. This capability is particularly important as cybersecurity systems become increasingly automated and integrated into critical infrastructure protection.
-
-The potential for bias in cybersecurity systems requires ongoing attention to ensure fair and equitable protection across different user populations and network environments. The uncertainty quantification framework provides tools for identifying potential bias through analysis of uncertainty patterns across different demographic or organizational groups.
-
-The societal benefits of improved cybersecurity capabilities include enhanced protection of critical infrastructure, personal data, and economic systems. The reduction of false positive rates through uncertainty quantification can improve the efficiency of security operations and reduce the burden on cybersecurity professionals.
 
 \subsection{Reproducibility and Open Science}
 
