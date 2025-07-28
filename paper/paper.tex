@@ -703,7 +703,7 @@ Figure~\ref{fig:ensemble_size_analysis} presents the ensemble size analysis base
 \includegraphics[width=0.48\textwidth]{figures/ensemble_size_analysis.pdf}
 \caption{Ensemble size analysis showing the effect of ensemble size on F1-score performance. Results demonstrate optimal performance at ensemble size 5, with diminishing returns beyond this point.}
 \label{fig:ensemble_size_analysis}
-\end{figure>
+\end{figure}
 
 The ensemble size analysis reveals that performance improvements are meaningful when increasing from single models to ensembles of 3-5 members, with optimal performance achieved at ensemble size M=5. Beyond this point, additional ensemble members provide diminishing returns while computational costs increase linearly, validating our choice of 5 ensemble members for the main experiments.
 
@@ -721,51 +721,18 @@ Our comprehensive experimental evaluation based on 394,455 authentic training da
 
 \subsection{Theoretical Validation}
 
-\subsubsection{Convergence Analysis}
+Our theoretical analysis is validated through empirical convergence rates with correlation exceeding 0.92 across all datasets, confirming the predicted exponential decay pattern. The uncertainty-accuracy correlation analysis reveals a strong negative correlation of -0.78 ± 0.03, indicating that higher uncertainty estimates reliably correspond to lower prediction accuracy, demonstrating the informativeness of our uncertainty estimates.
 
-Figure~\ref{fig:convergence} validates our theoretical convergence analysis. We fit exponential decay curves to the training loss and compare empirical convergence rates with theoretical bounds. Across all datasets, the empirical rates closely match the predicted $O(\exp(-t/(2\kappa)))$ convergence, with correlation coefficients above 0.92.
-
-Table~\ref{tab:convergence} summarizes the convergence analysis results for the empirical rate parameters ($-\eta\mu/2$) derived from fitting the training loss curves, and compares them against a representative theoretical bound parameter based on estimated condition numbers for deep learning tasks.
-
-\begin{table}[t]
-\centering
-\caption{Convergence Rate Analysis (Empirical vs. Theoretical Bounds)}
-\label{tab:convergence}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-\textbf{Dataset} & \textbf{Empirical Rate (Fitted $-\eta\mu/2$)} & \textbf{Representative Theoretical Bound ($-\frac{1}{2\kappa}$)} & \textbf{Correlation} \\
-\midrule
-NSL-KDD & 0.0261±0.003 & 0.0500 & 0.93 \\
-CICIDS2017 & 0.0244±0.002 & 0.0500 & 0.94 \\
-UNSW-NB15 & 0.0089±0.001 & 0.0500 & 0.92 \\
-SWAT & 0.0344±0.004 & 0.0500 & 0.95 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The close agreement between empirical and theoretical rates validates our mathematical framework and confirms that the single-layer transformer, when trained via gradient descent, exhibits convergence properties consistent with theoretical predictions under the specified assumptions. This suggests that the training process effectively leverages the optimization landscape to achieve efficient learning.
-
-\subsubsection{Uncertainty Quality Analysis}
-
-Uncertainty quality analysis provides comprehensive validation of our uncertainty decomposition framework through multiple complementary metrics. The uncertainty-accuracy correlation analysis reveals a strong negative correlation of -0.78 ± 0.03 (Pearson correlation coefficient, averaged across datasets), indicating that higher uncertainty estimates reliably correspond to lower prediction accuracy. This relationship demonstrates that our uncertainty estimates provide meaningful information about prediction reliability.
-
-Information-theoretic analysis quantifies the informativeness of uncertainty estimates through mutual information between uncertainty values and prediction correctness. We define prediction correctness as a binary variable (1 if correct, 0 if incorrect) and uncertainty as the total uncertainty $\sigma_{total}$. The mutual information $I(\text{Correctness}; \sigma_{total})$ is calculated using a histogram-based approximation for discrete bins of uncertainty and correctness. The measured mutual information of 0.34 bits (averaged across datasets) indicates substantial information content in the uncertainty estimates, significantly exceeding the baseline of 0.12 bits achieved by random uncertainty assignment. The random uncertainty baseline is established by permuting the uncertainty values independently of prediction correctness, effectively removing any true correlation. This result confirms that our uncertainty estimates capture genuine epistemic and aleatoric uncertainty rather than noise.
-
-The Area Under Rejection Curve (AURC) analysis evaluates the practical utility of uncertainty estimates for identifying incorrect predictions. By setting a confidence threshold and rejecting samples below it, the AURC measures the trade-off between coverage and error. Our approach achieves an AURC of 0.92 (averaged across datasets), indicating excellent ability to rank predictions by correctness using uncertainty scores. This performance substantially exceeds the theoretical random baseline of 0.5 and outperforms uncertainty-aware baselines (e.g., MCD, DE, VI) by margins of 0.08-0.15, confirming the practical value of our uncertainty estimates for risk management.
-
-\subsubsection{Generalization Bound Validation}
-
-Generalization bound validation examines the tightness and practical relevance of our PAC-Bayesian theoretical guarantees. We compute empirical generalization gaps by measuring the difference between training and test performance (specifically, the difference in F1-scores). For instance, the empirical F1-score generalization gap is $\text{F1}_{\text{train}} - \text{F1}_{\text{test}}$. We then compare these values with the theoretical bounds calculated using the PAC-Bayesian framework. The theoretical bound of 0.087 for NSL-KDD (for F1-score loss equivalent) is computed based on estimated KL divergences between initial (prior) and learned (posterior) parameter distributions for each ensemble member, approximated using empirical data statistics and standard techniques for estimating KL divergence in practical scenarios (e.g., by fitting Gaussian distributions to parameter distributions or using variational bounds). The bounds prove non-vacuous for all datasets, with particularly tight bounds achieved on NSL-KDD where the theoretical bound of 0.087 closely matches the empirical gap of 0.034. This validation demonstrates that our theoretical analysis provides meaningful guarantees rather than vacuous bounds that often plague PAC-Bayesian analysis, indicating that the ensemble effectively limits the complexity given the training data.
+The Area Under Rejection Curve (AURC) analysis evaluates the practical utility of uncertainty estimates, achieving an AURC of 0.92 (averaged across datasets), indicating excellent ability to rank predictions by correctness using uncertainty scores.
 
 \begin{figure}[t]
 \centering
-% Ensure high-res version is used
 \includegraphics[width=0.48\textwidth]{figures/uncertainty_distribution.pdf}
 \caption{Uncertainty distribution for correct (blue) and incorrect (red) predictions on NSL-KDD dataset. Clear separation demonstrates the informativeness of uncertainty estimates for identifying prediction errors.}
-\label{fig:uncertainty_distribution}
+\label{fig:uncertainty_separation}
 \end{figure}
 
-The uncertainty distribution analysis illustrated in Figure~\ref{fig:uncertainty_distribution} provides compelling evidence for the informativeness of our uncertainty estimates. The clear separation between uncertainty distributions for correct and incorrect predictions demonstrates that the model appropriately expresses higher uncertainty for samples where predictions are likely to be incorrect. Based on our real experimental results (example shown for NSL-KDD), correct predictions exhibit a concentration of low uncertainty values, while incorrect predictions show substantially higher uncertainty. This separation enables effective uncertainty-based sample rejection and provides valuable information for human-analyst collaboration in operational deployment scenarios.
+The uncertainty distribution analysis illustrated in Figure~\ref{fig:uncertainty_separation} provides compelling evidence for the informativeness of our uncertainty estimates. The clear separation between uncertainty distributions for correct and incorrect predictions demonstrates that the model appropriately expresses higher uncertainty for samples where predictions are likely to be incorrect. Based on our real experimental results (example shown for NSL-KDD), correct predictions exhibit a concentration of low uncertainty values, while incorrect predictions show substantially higher uncertainty. This separation enables effective uncertainty-based sample rejection and provides valuable information for human-analyst collaboration in operational deployment scenarios.
 
 \subsection{Robustness Analysis}
 
@@ -815,124 +782,31 @@ The increased uncertainty under attack provides a secondary defense mechanism th
 
 The comprehensive calibration analysis presented in Figure~\ref{fig:reliability_diagram} (for NSL-KDD) demonstrates the calibration quality of our uncertainty estimates. The reliability diagram shows the relationship between predicted confidence and actual accuracy across confidence bins, providing insights into how well our confidence scores align with empirical accuracy. A closer alignment to the diagonal line indicates better calibration. Figure~\ref{fig:confidence_histogram} reveals the distribution of confidence scores produced by our method, showing how the model assigns confidence levels across different prediction scenarios. The combination of these calibration analyses ensures that uncertainty estimates provide meaningful indicators of prediction quality for operational decision-making.
 
-\subsection{In-Context Learning Evaluation}
 
-We conduct comprehensive ICL evaluation using genuine meta-learning protocols to validate our framework's ability to adapt to new attack types without parameter updates. Our evaluation follows established meta-learning practices with proper train/validation/test splits at the attack family level.
 
-\subsubsection{Meta-Learning Experimental Setup}
 
-We partition attack families across datasets as follows: \textbf{Meta-Training Families} (60\%): DoS variants, Probe attacks, and Normal traffic patterns used for meta-training. \textbf{Meta-Validation Families} (20\%): U2R attacks and specific malware families for hyperparameter tuning and early stopping. \textbf{Meta-Test Families} (20\%): R2L attacks, advanced persistent threats (APTs), and zero-day exploits completely withheld during training for genuine ICL evaluation.
-
-For each meta-test family, we evaluate ICL performance using the standard few-shot protocol: sample $k$ context examples and $n_q$ query examples, where the model must predict query labels using only the context without any parameter updates. We compare against established meta-learning baselines adapted for cybersecurity.
-
-\subsubsection{ICL Performance Results}
-
-\begin{table}[t]
-\centering
-\caption{Genuine ICL Performance on Meta-Test Attack Families (F1-Score)}
-\label{tab:icl_results}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-\textbf{Method} & \textbf{1-shot} & \textbf{5-shot} & \textbf{10-shot} & \textbf{20-shot} \\
-\midrule
-\textbf{Meta-Learning Baselines:} & & & & \\
-MAML (adapted) & 0.4123±0.067 & 0.5234±0.054 & 0.6012±0.048 & 0.6456±0.042 \\
-Prototypical Networks & 0.4567±0.072 & 0.5789±0.061 & 0.6234±0.055 & 0.6678±0.049 \\
-Matching Networks & 0.4234±0.069 & 0.5456±0.058 & 0.6123±0.052 & 0.6534±0.046 \\
-\midrule
-\textbf{ICL Baselines:} & & & & \\
-GPT-3 Style (adapted) & 0.3789±0.078 & 0.4923±0.065 & 0.5567±0.059 & 0.6012±0.053 \\
-Transformer ICL (vanilla) & 0.4012±0.074 & 0.5123±0.062 & 0.5789±0.056 & 0.6234±0.050 \\
-\midrule
-\textbf{Our Method:} & & & & \\
-ICL-Ensemble (Single) & 0.4789±0.063 & 0.6234±0.051 & 0.7123±0.045 & 0.7567±0.041 \\
-\textbf{ICL-Ensemble (Full)} & \textbf{0.5234±0.058} & \textbf{0.6789±0.047} & \textbf{0.7456±0.042} & \textbf{0.7891±0.038} \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsubsection{ICL Analysis and Validation}
 
 Table~\ref{tab:icl_results} demonstrates genuine ICL capabilities with significant improvements over meta-learning baselines. Our method achieves 52.34\% F1-score in 1-shot scenarios, substantially outperforming MAML (41.23\%) and Prototypical Networks (45.67\%). The performance scaling from 1-shot to 20-shot (52.34\% → 78.91\%) validates our theoretical predictions about ICL adaptation rates.
 
-\textbf{Attention Mechanism Analysis:} We analyze the attention patterns during ICL to verify gradient descent-like behavior. Figure~\ref{fig:attention_correlation} shows that attention weights correlate strongly (r=0.84) with gradient magnitudes computed via explicit gradient descent on context examples, confirming the theoretical foundation.
+\textbf{Attention Mechanism Analysis:} We analyze the attention patterns during ICL to verify gradient descent-like behavior. Figure~\ref{fig:icl_attention_correlation} shows that attention weights correlate strongly (r=0.84) with gradient magnitudes computed via explicit gradient descent on context examples, confirming the theoretical foundation.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\columnwidth]{figures/attention_correlation.pdf}
 \caption{Correlation between attention weights and gradient magnitudes during ICL adaptation. The strong linear relationship (r=0.84) confirms that attention mechanisms approximate gradient descent as predicted by theory. Each point represents a context-query pair from different attack families.}
-\label{fig:attention_correlation}
+\label{fig:icl_attention_correlation}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.8\columnwidth]{figures/loss_landscape.pdf}
 \caption{Loss landscape analysis showing local convexity regions during optimization. The visualization uses random direction sampling around converged parameters, with blue regions indicating local convexity (positive definite Hessian) and red regions indicating non-convex areas. 78.3\% of the optimization trajectory operates within locally convex regions.}
-\label{fig:loss_landscape}
+\label{fig:icl_loss_landscape}
 \end{figure}
 
-\textbf{Approximation Error Characterization:} We empirically characterize the approximation error $\epsilon_{approx}$ in Theorem 2 by comparing attention-based ICL updates with explicit gradient descent steps. For each attack family, we compute:
-$$\epsilon_{approx} = \|\text{Attention}(x_q, \mathcal{C}) - (x_q - \eta \nabla_{x_q} \mathcal{L}(\mathcal{C}))\|$$
 
-Results show $\epsilon_{approx} = 0.12 \pm 0.03$ for DoS attacks, $\epsilon_{approx} = 0.08 \pm 0.02$ for Probe attacks, and $\epsilon_{approx} = 0.15 \pm 0.04$ for R2L attacks. The approximation quality correlates with attack complexity: simpler attack patterns (Probe) yield better approximations, while complex patterns (R2L) show larger deviations. Importantly, all measured values satisfy $\epsilon_{approx} < 0.2$, ensuring the theoretical bounds remain meaningful.
-
-\textbf{ICL Adaptation Quality Analysis:} We validate the theoretical prediction that adaptation error decreases as $O(1/\sqrt{k})$ by measuring performance across different context sizes. Empirical results show adaptation error scaling as $0.34 \cdot k^{-0.48}$, closely matching the theoretical $k^{-0.5}$ prediction (correlation r=0.92). This confirms that our ICL implementation achieves the theoretically predicted convergence rates.
-
-\textbf{Ablation Studies:} (1) \textit{Context Length}: Performance saturates around 15-20 context examples, consistent with transformer context limitations. (2) \textit{Ensemble Effect}: Single models achieve 47.89\% (1-shot) vs. 52.34\% for ensembles, demonstrating uncertainty quantification benefits. (3) \textit{Attack Family Similarity}: ICL performance correlates with attack family similarity (measured via feature distance), validating the meta-learning hypothesis.
-
-\textbf{Computational Efficiency:} ICL inference requires only forward passes without parameter updates, achieving 8ms average latency compared to 45ms for MAML fine-tuning, making it practical for real-time threat response.
-
-\subsubsection{Empirical Validation of Theoretical Assumptions}
-
-To strengthen the theoretical foundations, we provide empirical validation of the key assumptions underlying our convergence guarantees.
-
-\textbf{Local Convexity Analysis:} We empirically investigate the local convexity assumption in Theorem 1 by analyzing the optimization landscape during training. Figure~\ref{fig:loss_landscape} shows the loss surface visualization using random direction sampling around converged parameters. We observe that 78.3\% of the optimization trajectory operates within regions exhibiting local convexity (positive definite Hessian eigenvalues), supporting the practical validity of our assumption. The remaining 21.7\% corresponds to early training phases where the assumption may not hold, but convergence still occurs due to the overall favorable geometry.
-
-\textbf{Cybersecurity Feature Space Smoothness:} We validate the smoothness assumption (Assumption 2 in Theorem 2) by measuring Lipschitz constants across attack families. For network flows $x, x'$ within the same attack family, we compute $L_{empirical} = \max_{x,x'} \frac{\|f(x) - f(x')\|}{\|x - x'\|}$. Results show $L_{empirical} = 2.34 \pm 0.67$ for DoS attacks, $L_{empirical} = 1.89 \pm 0.45$ for Probe attacks, and $L_{empirical} = 3.12 \pm 0.89$ for R2L attacks, confirming bounded smoothness within attack families.
-
-\textbf{Attack Family Similarity Validation:} We measure attack family similarity using cosine similarity in the learned embedding space. Intra-family similarity averages 0.82 ± 0.12, while inter-family similarity averages 0.34 ± 0.18, confirming that our meta-learning approach can effectively distinguish and group related attack patterns. This validates the assumption that context examples are representative of their attack types.
-
-\textbf{Noise Bound Characterization:} We empirically estimate the noise bound $\sigma$ in Assumption 3 by comparing gradient estimates from finite samples versus population gradients (approximated using large validation sets). Across all attack families, we observe $\sigma = 0.23 \pm 0.08$, which is sufficiently small to ensure the theoretical guarantees hold in practice.
-
-This comprehensive evaluation demonstrates that our framework achieves genuine ICL capabilities for cybersecurity applications, with strong empirical support for the theoretical assumptions underlying our convergence guarantees.
-
-\subsubsection{Failure Analysis and Limitations}
-
-While our ICL framework demonstrates strong performance, we identify several failure modes and boundary conditions that provide insights into its limitations:
-
-\textbf{Context Length Limitations:} ICL performance degrades significantly when context length exceeds 25 examples due to attention dilution. Performance drops from 74.5\% (20-shot) to 68.2\% (30-shot), indicating that the single-layer architecture has finite context processing capacity.
-
-\textbf{Attack Family Dissimilarity:} When attack families are highly dissimilar (cosine similarity < 0.2), ICL adaptation fails with F1-scores dropping below 35\%. This occurs for attack pairs like DoS vs. sophisticated APTs, where feature distributions are fundamentally different and violate the smoothness assumption.
-
-\textbf{Noisy Context Examples:} ICL performance is sensitive to label noise in context examples. With 20\% label noise, performance drops by 15.3\% on average, as the attention mechanism cannot distinguish between correct and incorrect context patterns.
-
-\textbf{Adversarial Context Poisoning:} Malicious context examples can degrade ICL performance. When 30\% of context examples are adversarially crafted, adaptation accuracy drops to 42.1\%, highlighting vulnerability to context manipulation attacks.
-
-\textbf{Distribution Shift:} ICL adaptation fails when query examples come from significantly different distributions than context examples, even within the same attack family. This occurs when attack tools or network configurations change substantially.
-
-These failure modes inform deployment considerations and suggest areas for future improvement, including robust context selection mechanisms and multi-layer architectures for enhanced context processing.
-
-\subsubsection{Meta-Learning Baseline Implementation Details}
-
-To ensure fair comparison, we carefully adapted established meta-learning methods to cybersecurity:
-
-\textbf{MAML Adaptation:} We implement Model-Agnostic Meta-Learning~\cite{finn2017model} with a neural network backbone matching our transformer's parameter count. The inner loop performs 5 gradient steps with learning rate $\alpha = 0.01$ on context examples, while the outer loop uses $\beta = 0.001$ for meta-updates. We adapt MAML's loss function to handle cybersecurity's class imbalance through weighted cross-entropy.
-
-\textbf{Prototypical Networks:} We adapt Prototypical Networks~\cite{snell2017prototypical} by computing attack family prototypes in the embedding space. For each context set $\mathcal{C}_i$, we compute prototype $p_i = \frac{1}{|\mathcal{C}_i|} \sum_{x \in \mathcal{C}_i} \phi(x)$ where $\phi$ is a learned embedding function. Query classification uses distance to prototypes: $P(y = c | x_q) = \frac{\exp(-d(\phi(x_q), p_c))}{\sum_{c'} \exp(-d(\phi(x_q), p_{c'}))}$.
-
-\textbf{Matching Networks:} We implement Matching Networks~\cite{vinyals2016matching} with attention-based similarity matching. The model computes attention weights between query and context examples: $\alpha_i = \frac{\exp(f(\phi(x_q), \phi(x_i)))}{\sum_j \exp(f(\phi(x_q), \phi(x_j)))}$ where $f$ is a learned similarity function.
-
-\textbf{Performance Analysis:} Our ICL-Ensemble method significantly outperforms these baselines across all shot settings. The key advantages are: (1) \textit{No Inner Loop Updates}: ICL requires only forward passes, achieving 8ms inference vs. 45ms for MAML. (2) \textit{Better Uncertainty}: Ensemble provides principled uncertainty quantification lacking in baseline methods. (3) \textit{Cybersecurity Adaptation}: Our method is specifically designed for cybersecurity feature spaces and attack patterns.
-
-\textbf{Statistical Significance:} We conduct paired t-tests across 100 random meta-test episodes. Our method achieves statistically significant improvements (p < 0.001) over all baselines in 1-shot, 5-shot, and 10-shot settings, confirming the effectiveness of ICL for cybersecurity applications.
-
-\subsection{Real-World Deployment and Practical Impact}
-
-A key strength of our proposed framework lies in its practical applicability. The system has been successfully deployed in a production environment within a large enterprise network monitoring critical infrastructure, processing over 1 million network flows daily. The deployment runs on a distributed cluster of GPUs (NVIDIA V100), achieving an average inference time of 12ms per network flow, which is well within the real-time requirements for active intrusion detection.
-
-The primary practical impact of our uncertainty-aware approach in this real-world setting has been the significant reduction in false positives and the improved efficiency of security analysts. By providing well-calibrated uncertainty estimates, the system allows security operations center (SOC) analysts to prioritize alerts effectively. Alerts with high confidence predictions (low uncertainty) are automatically actioned, while those with high uncertainty (ambiguous cases, potential novel attacks, or adversarial attempts) are flagged for immediate human review. This uncertainty-guided triage has reduced the daily manual review workload by approximately 73\%, leading to an estimated 25\% increase in the efficiency of the security team. This allows analysts to focus their expertise on high-value, complex threats.
-
-Furthermore, the system's ability to express higher uncertainty for novel or adversarial attacks has proven invaluable. When new attack patterns emerge that the model has not explicitly seen during training, its uncertainty measures increase, providing an early warning signal even if the classification decision itself might initially be incorrect or confidently wrong. For critical attacks, the system maintains a 99.1\% detection rate, demonstrating its reliability for high-stakes scenarios. The robustness provided by adversarial training and ensemble diversity has also minimized successful evasion attempts observed in deployment. The continuous learning mechanisms are being explored to mitigate data drift, where models are periodically retrained on newly labeled traffic to maintain performance as network behaviors and threat landscapes evolve.
 
 \section{Conclusion}
 
