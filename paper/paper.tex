@@ -660,6 +660,35 @@ C\&W ($\epsilon=0.01$) & 0.7726 & 0.7714 & 0.15 \\
 
 The results demonstrate substantial robustness across different attack types and strengths. Our method maintains strong performance even under adversarial perturbations, with the C\&W attack showing minimal impact (only 0.15\% accuracy drop), indicating excellent robustness against this sophisticated attack method. Even under stronger perturbations (PGD with $\epsilon=0.05$), the model retains 72.72\% accuracy, representing a robustness ratio of 0.941. This resilience stems from the ensemble architecture and adversarial training components that explicitly account for potential perturbations during the learning process.
 
+\begin{table}[t]
+\centering
+\caption{Anomaly Detection Performance Comparison on SWaT Dataset - FPR(\%), Precision(\%), Recall(\%), and F1-Score(\%) of Our Model with Baseline Methods}
+\label{tab:swat_comparison}
+\resizebox{1\columnwidth}{!}{%
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Method} & \textbf{FPR (\%)} & \textbf{Precision (\%)} & \textbf{Recall (\%)} & \textbf{F1 (\%)} \\
+\midrule
+DTAAD \cite{tang2021dtaad} & 13.33 & 59.88 & 99.99 & 74.90 \\
+GDN \cite{deng2021gdn} & 10.70 & 64.91 & 99.45 & 78.55 \\
+LSTM-AD \cite{malhotra2016lstm} & 13.33 & 59.88 & 99.99 & 74.90 \\
+MAD-GAN \cite{li2019madgan} & 13.57 & 59.45 & 99.99 & 74.57 \\
+MSCRED \cite{zhang2019mscres} & 13.33 & 59.89 & 99.99 & 74.91 \\
+MTAD-GAT \cite{zhao2020multivariate} & 13.39 & 59.78 & 99.99 & 74.83 \\
+OmniAnomaly \cite{su2019omnianomaly} & 13.36 & 59.83 & 99.99 & 74.87 \\
+TranAD \cite{tian2021tranad} & 13.35 & 59.85 & 99.99 & 74.88 \\
+USAD \cite{audibert2020usad} & 13.26 & 60.02 & 99.99 & 75.01 \\
+ICSS \cite{zhan2024anomaly} & 3.07 & 84.65 & 85.12 & 84.88 \\
+\midrule
+\textbf{Ours (Bayesian Ensemble Transformer)} & \textbf{8.60±1.2} & \textbf{90.17±0.8} & \textbf{78.20±1.5} & \textbf{82.83±1.1} \\
+\bottomrule
+\end{tabular}
+}
+\footnotesize{Note: Standard deviations are provided for our method (5 runs). Baseline results are as reported in original papers and therefore do not include standard deviations.}
+\end{table}
+
+Table~\ref{tab:swat_comparison} provides a comprehensive comparison of our method against established literature baselines on the SWaT dataset. Our Bayesian Ensemble Transformer demonstrates competitive performance with an F1-score of 82.83\%, significantly outperforming most traditional methods while maintaining excellent precision (90.17\%). Notably, our method achieves better FPR (8.60\%) than most baselines, with only ICSS achieving a lower FPR of 3.07\%. The inclusion of uncertainty quantification provides additional value not available in baseline methods, making our approach particularly suitable for critical infrastructure monitoring where confidence estimates are essential for decision-making.
+
 \subsection{Training Dynamics and Convergence Analysis}
 
 Figure~\ref{fig:convergence_analysis} presents the convergence analysis based on our training data from 394,455 training data points. The convergence curves demonstrate the effectiveness of our training procedure across different loss components and metrics.
@@ -825,32 +854,7 @@ ICL-Ensemble-Full & 1.2000 & 1.2000 & 1.2000 & 1.2000 \\
 
 Table~\ref{tab:icl_performance} demonstrates genuine ICL capabilities with significant improvements over meta-learning baselines. Our method achieves superior performance in few-shot scenarios, substantially outperforming MAML and other meta-learning approaches across different shot settings.
 
-\begin{table}[t]
-\centering
-\caption{Anomaly Detection Performance Comparison on SWaT Dataset - FPR(\%), Precision(\%), Recall(\%), and F1-Score(\%) of Our Model with Baseline Methods}
-\label{tab:swat_comparison}
-\resizebox{1\columnwidth}{!}{%
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-\textbf{Method} & \textbf{FPR (\%)} & \textbf{Precision (\%)} & \textbf{Recall (\%)} & \textbf{F1 (\%)} \\
-\midrule
-DTAAD \cite{tang2021dtaad} & 13.33 & 59.88 & 99.99 & 74.90 \\
-GDN \cite{deng2021gdn} & 10.70 & 64.91 & 99.45 & 78.55 \\
-LSTM-AD \cite{malhotra2016lstm} & 13.33 & 59.88 & 99.99 & 74.90 \\
-MAD-GAN \cite{li2019madgan} & 13.57 & 59.45 & 99.99 & 74.57 \\
-MSCRED \cite{zhang2019mscres} & 13.33 & 59.89 & 99.99 & 74.91 \\
-MTAD-GAT \cite{zhao2020multivariate} & 13.39 & 59.78 & 99.99 & 74.83 \\
-OmniAnomaly \cite{su2019omnianomaly} & 13.36 & 59.83 & 99.99 & 74.87 \\
-TranAD \cite{tian2021tranad} & 13.35 & 59.85 & 99.99 & 74.88 \\
-USAD \cite{audibert2020usad} & 13.26 & 60.02 & 99.99 & 75.01 \\
-ICSS \cite{zhan2024anomaly} & 3.07 & 84.65 & 85.12 & 84.88 \\
-\midrule
-\textbf{Ours (Bayesian Ensemble Transformer)} & \textbf{8.60±1.2} & \textbf{90.17±0.8} & \textbf{78.20±1.5} & \textbf{82.83±1.1} \\
-\bottomrule
-\end{tabular}
-}
-\footnotesize{Note: Standard deviations are provided for our method (5 runs). Baseline results are as reported in original papers and therefore do not include standard deviations.}
-\end{table}
+
 
 \subsubsection{Attention Mechanism Analysis}
 
