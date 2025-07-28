@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
-# Set publication-ready font sizes
+# Set publication-ready font sizes and frame styling
 plt.rcParams.update({
     'font.size': 14,           # Base font size
     'axes.labelsize': 16,      # Axis labels
@@ -28,16 +28,39 @@ plt.rcParams.update({
     'legend.fontsize': 14,     # Legend
     'figure.titlesize': 20,    # Figure title (we'll remove these)
     'lines.linewidth': 2,      # Line width
-    'lines.markersize': 6      # Marker size
+    'lines.markersize': 6,     # Marker size
+    # Frame styling
+    'axes.linewidth': 1.5,     # Frame line width
+    'axes.edgecolor': 'black', # Frame color
+    'axes.spines.left': True,  # Show left spine
+    'axes.spines.bottom': True, # Show bottom spine
+    'axes.spines.top': True,   # Show top spine
+    'axes.spines.right': True, # Show right spine
+    'xtick.major.width': 1.2,  # X-axis tick width
+    'ytick.major.width': 1.2,  # Y-axis tick width
+    'xtick.minor.width': 0.8,  # X-axis minor tick width
+    'ytick.minor.width': 0.8   # Y-axis minor tick width
 })
 
 class RealDataExtractor:
     def __init__(self):
         self.figures_dir = "figures"
         self.log_file = "logs/comprehensive_experiments_robust_25720824.err"
-        
+
         # Create figures directory if it doesn't exist
         os.makedirs(self.figures_dir, exist_ok=True)
+
+    def add_frame_to_axes(self, ax):
+        """Add visible frame to axes"""
+        # Ensure all spines are visible and styled
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(1.5)
+            spine.set_edgecolor('black')
+
+        # Style ticks
+        ax.tick_params(width=1.2, length=6)
+        ax.tick_params(which='minor', width=0.8, length=3)
         
     def extract_training_data(self):
         """Extract real training data from log files"""
@@ -129,18 +152,30 @@ class RealDataExtractor:
         ax1.legend()
         ax1.grid(True, alpha=0.3)
         ax1.set_yscale('log')  # Log scale to better show convergence
+        self.add_frame_to_axes(ax1)
+        # Add subfigure label
+        ax1.text(0.02, 0.02, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         # Plot 2: Uncertainty Evolution by Epoch
         ax2.plot(unique_epochs, epoch_uncertainties, 'o-', color='green')
         ax2.set_xlabel('Epoch')
         ax2.set_ylabel('Uncertainty')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
+        # Add subfigure label
+        ax2.text(0.02, 0.02, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         # Plot 3: Diversity Evolution by Epoch
         ax3.plot(unique_epochs, epoch_diversities, 'o-', color='purple')
         ax3.set_xlabel('Epoch')
         ax3.set_ylabel('Diversity')
         ax3.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax3)
+        # Add subfigure label
+        ax3.text(0.02, 0.02, '(c)', transform=ax3.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         # Plot 4: Training Progress Summary
         # Show final convergence metrics
@@ -160,6 +195,7 @@ class RealDataExtractor:
         ax4.set_ylabel('Normalized Performance')
         ax4.grid(True, alpha=0.3, axis='y')
         plt.setp(ax4.get_xticklabels(), rotation=45, ha='right')
+        self.add_frame_to_axes(ax4)
 
         # Add actual values as text on bars
         for i, (bar, val) in enumerate(zip(bars, final_values)):
@@ -167,6 +203,10 @@ class RealDataExtractor:
             ax4.annotate(f'{val:.4f}', xy=(bar.get_x() + bar.get_width()/2, height),
                         xytext=(0, 3), textcoords="offset points",
                         ha='center', va='bottom')
+
+        # Add subfigure label
+        ax4.text(0.02, 0.02, '(d)', transform=ax4.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/convergence_analysis.pdf', dpi=300, bbox_inches='tight')
@@ -229,6 +269,10 @@ class RealDataExtractor:
         ax1.set_xticklabels(methods, rotation=45, ha='right')
         ax1.legend()
         ax1.grid(True, alpha=0.3, axis='y')
+        self.add_frame_to_axes(ax1)
+        # Add subfigure label
+        ax1.text(0.02, 0.98, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 2: Calibration Quality (using FPR as proxy)
         # Lower FPR indicates better calibration
@@ -239,11 +283,15 @@ class RealDataExtractor:
         ax2.set_ylabel('Calibration Quality (1-FPR)')
         ax2.grid(True, alpha=0.3, axis='y')
         plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
+        self.add_frame_to_axes(ax2)
 
         # Highlight best performing method
         best_idx = np.argmax(calibration_scores)
         bars[best_idx].set_color('#d62728')
         bars[best_idx].set_alpha(1.0)
+        # Add subfigure label
+        ax2.text(0.02, 0.98, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/calibration_analysis.pdf', dpi=300, bbox_inches='tight')
@@ -307,6 +355,10 @@ class RealDataExtractor:
             ax1.set_xticklabels(methods, rotation=45, ha='right')
             ax1.legend()
             ax1.grid(True, alpha=0.3, axis='y')
+            self.add_frame_to_axes(ax1)
+            # Add subfigure label
+            ax1.text(0.02, 0.98, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 2: Method Robustness Ranking
         if methods:
@@ -323,6 +375,7 @@ class RealDataExtractor:
             ax2.set_ylabel('Robustness Score (F1)')
             ax2.grid(True, alpha=0.3, axis='y')
             plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
+            self.add_frame_to_axes(ax2)
 
             # Highlight our method if present
             our_method_keywords = ['ours', 'bayesian', 'ensemble', 'transformer']
@@ -331,6 +384,10 @@ class RealDataExtractor:
                     bars[i].set_color('#d62728')
                     bars[i].set_alpha(1.0)
                     break
+
+            # Add subfigure label
+            ax2.text(0.02, 0.98, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/robustness_analysis.pdf', dpi=300, bbox_inches='tight')
@@ -363,6 +420,7 @@ class RealDataExtractor:
         ax1.set_yticks(range(len(metric_labels)))
         ax1.set_xticklabels(metric_labels)
         ax1.set_yticklabels(metric_labels)
+        self.add_frame_to_axes(ax1)
 
         # Add correlation values as text
         for i in range(len(metric_labels)):
@@ -371,6 +429,9 @@ class RealDataExtractor:
                                ha="center", va="center", color="black", fontweight='bold')
 
         plt.colorbar(im1, ax=ax1)
+        # Add subfigure label
+        ax1.text(0.02, 0.98, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 2: Uncertainty vs Diversity Scatter
         # Sample data for visualization (every 100th point to avoid overcrowding)
@@ -383,7 +444,11 @@ class RealDataExtractor:
         ax2.set_xlabel('Uncertainty')
         ax2.set_ylabel('Diversity')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
         plt.colorbar(scatter, ax=ax2, label='Loss')
+        # Add subfigure label
+        ax2.text(0.02, 0.98, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/attention_correlation.pdf', dpi=300, bbox_inches='tight')
@@ -408,6 +473,7 @@ class RealDataExtractor:
         ax1.set_xlabel('Uncertainty Values')
         ax1.set_ylabel('Frequency')
         ax1.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax1)
 
         # Add statistics
         mean_unc = np.mean(uncertainties)
@@ -416,6 +482,9 @@ class RealDataExtractor:
         ax1.axvline(mean_unc + std_unc, color='orange', linestyle='--', alpha=0.7, label=f'±1σ: {std_unc:.3f}')
         ax1.axvline(mean_unc - std_unc, color='orange', linestyle='--', alpha=0.7)
         ax1.legend()
+        # Add subfigure label
+        ax1.text(0.02, 0.98, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 2: Uncertainty Evolution Over Time
         # Sample data for cleaner visualization
@@ -426,6 +495,10 @@ class RealDataExtractor:
         ax2.set_xlabel('Training Step (Sampled)')
         ax2.set_ylabel('Uncertainty')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
+        # Add subfigure label
+        ax2.text(0.02, 0.98, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/uncertainty_distribution.pdf', dpi=300, bbox_inches='tight')
@@ -457,25 +530,41 @@ class RealDataExtractor:
         ax1.set_xlabel('Training Step (Sampled)')
         ax1.set_ylabel('Total Loss')
         ax1.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax1)
+        # Add subfigure label
+        ax1.text(0.02, 0.98, '(a)', transform=ax1.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 2: Cross-Entropy Loss Evolution
         ax2.plot(range(len(sample_ce)), sample_ce, 'r-', alpha=0.8)
         ax2.set_xlabel('Training Step (Sampled)')
         ax2.set_ylabel('Cross-Entropy Loss')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
+        # Add subfigure label
+        ax2.text(0.02, 0.98, '(b)', transform=ax2.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 3: Diversity Evolution
         ax3.plot(range(len(sample_div)), sample_div, 'g-', alpha=0.8)
         ax3.set_xlabel('Training Step (Sampled)')
         ax3.set_ylabel('Diversity')
         ax3.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax3)
+        # Add subfigure label
+        ax3.text(0.02, 0.98, '(c)', transform=ax3.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         # Plot 4: Loss Components Relationship
         scatter = ax4.scatter(sample_ce, sample_div, c=sample_losses, cmap='plasma', alpha=0.6)
         ax4.set_xlabel('Cross-Entropy Loss')
         ax4.set_ylabel('Diversity')
         ax4.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax4)
         plt.colorbar(scatter, ax=ax4, label='Total Loss')
+        # Add subfigure label
+        ax4.text(0.02, 0.98, '(d)', transform=ax4.transAxes, fontsize=16, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8), va='top')
 
         plt.tight_layout()
         plt.savefig(f'{self.figures_dir}/loss_landscape.pdf', dpi=300, bbox_inches='tight')

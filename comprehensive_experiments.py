@@ -32,6 +32,30 @@ import warnings
 import pickle
 warnings.filterwarnings('ignore')
 
+# Set publication-ready font sizes and frame styling
+plt.rcParams.update({
+    'font.size': 14,           # Base font size
+    'axes.labelsize': 16,      # Axis labels
+    'axes.titlesize': 18,      # Subplot titles (we'll remove these)
+    'xtick.labelsize': 14,     # X-axis tick labels
+    'ytick.labelsize': 14,     # Y-axis tick labels
+    'legend.fontsize': 14,     # Legend
+    'figure.titlesize': 20,    # Figure title (we'll remove these)
+    'lines.linewidth': 2,      # Line width
+    'lines.markersize': 6,     # Marker size
+    # Frame styling
+    'axes.linewidth': 1.5,     # Frame line width
+    'axes.edgecolor': 'black', # Frame color
+    'axes.spines.left': True,  # Show left spine
+    'axes.spines.bottom': True, # Show bottom spine
+    'axes.spines.top': True,   # Show top spine
+    'axes.spines.right': True, # Show right spine
+    'xtick.major.width': 1.2,  # X-axis tick width
+    'ytick.major.width': 1.2,  # Y-axis tick width
+    'xtick.minor.width': 0.8,  # X-axis minor tick width
+    'ytick.minor.width': 0.8   # Y-axis minor tick width
+})
+
 # Import our uncertainty-aware framework
 from uncertainty_ids.models.transformer import BayesianEnsembleTransformer
 from uncertainty_ids.models.uncertainty import UncertaintyQuantifier
@@ -56,6 +80,18 @@ class ComprehensiveExperimentFramework:
         # Create directories
         for dir_path in [self.figures_dir, self.tables_dir, self.models_dir]:
             os.makedirs(dir_path, exist_ok=True)
+
+    def add_frame_to_axes(self, ax):
+        """Add visible frame to axes"""
+        # Ensure all spines are visible and styled
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+            spine.set_linewidth(1.5)
+            spine.set_edgecolor('black')
+
+        # Style ticks
+        ax.tick_params(width=1.2, length=6)
+        ax.tick_params(which='minor', width=0.8, length=3)
     
     def load_config(self, config_path: str) -> Dict:
         """Load experimental configuration."""
@@ -1900,15 +1936,15 @@ class ComprehensiveExperimentFramework:
         ax1.plot(ensemble_sizes, f1_scores, 'b-o', linewidth=2, markersize=6)
         ax1.set_xlabel('Ensemble Size')
         ax1.set_ylabel('F1-Score')
-        ax1.set_title('F1-Score vs Ensemble Size')
         ax1.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax1)
 
         # ECE plot
         ax2.plot(ensemble_sizes, ece_values, 'r-s', linewidth=2, markersize=6)
         ax2.set_xlabel('Ensemble Size')
         ax2.set_ylabel('Expected Calibration Error (ECE)')
-        ax2.set_title('ECE vs Ensemble Size')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
 
         plt.tight_layout()
         plt.savefig(f"{self.figures_dir}/ensemble_size_analysis.pdf", dpi=300, bbox_inches='tight')
@@ -1946,15 +1982,15 @@ class ComprehensiveExperimentFramework:
         else:
             theoretical_bound = train_losses
 
-        plt.figure(figsize=(10, 6))
-        plt.plot(epochs, train_losses, 'b-', linewidth=2, label='Empirical Training Loss')
-        plt.plot(epochs, val_losses, 'g-', linewidth=2, label='Validation Loss')
-        plt.plot(epochs, theoretical_bound, 'r--', linewidth=2, label='Theoretical Bound O(exp(-t/2κ))')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Convergence Analysis: Empirical vs Theoretical')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(epochs, train_losses, 'b-', linewidth=2, label='Empirical Training Loss')
+        ax.plot(epochs, val_losses, 'g-', linewidth=2, label='Validation Loss')
+        ax.plot(epochs, theoretical_bound, 'r--', linewidth=2, label='Theoretical Bound O(exp(-t/2κ))')
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Loss')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax)
         plt.savefig(f"{self.figures_dir}/convergence_analysis.pdf", dpi=300, bbox_inches='tight')
         plt.close()
 
@@ -2010,16 +2046,17 @@ class ComprehensiveExperimentFramework:
                     break
 
         # Plot real uncertainty distributions
-        plt.figure(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 6))
         if correct_uncertainties:
-            plt.hist(correct_uncertainties, bins=30, alpha=0.7, label='Correct Predictions', color='blue', density=True)
+            ax.hist(correct_uncertainties, bins=30, alpha=0.7, label='Correct Predictions', color='blue', density=True)
         if incorrect_uncertainties:
-            plt.hist(incorrect_uncertainties, bins=30, alpha=0.7, label='Incorrect Predictions', color='red', density=True)
+            ax.hist(incorrect_uncertainties, bins=30, alpha=0.7, label='Incorrect Predictions', color='red', density=True)
 
-        plt.xlabel('Uncertainty')
-        plt.ylabel('Density')
-        plt.title('Uncertainty Distribution for Correct vs Incorrect Predictions')
-        plt.legend()
+        ax.set_xlabel('Uncertainty')
+        ax.set_ylabel('Density')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax)
         plt.grid(True, alpha=0.3)
         plt.savefig(f"{self.figures_dir}/uncertainty_distribution.pdf", dpi=300, bbox_inches='tight')
         plt.close()
@@ -2090,16 +2127,16 @@ class ComprehensiveExperimentFramework:
         ax1.plot(bin_centers, observed_freq, 'ro-', linewidth=2, markersize=6, label='Our Method')
         ax1.set_xlabel('Mean Predicted Probability')
         ax1.set_ylabel('Fraction of Positives')
-        ax1.set_title('Reliability Diagram')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax1)
 
         # Confidence histogram
         ax2.hist(all_confidences, bins=20, alpha=0.7, color='skyblue', edgecolor='black')
         ax2.set_xlabel('Confidence')
         ax2.set_ylabel('Count')
-        ax2.set_title('Confidence Histogram')
         ax2.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax2)
 
         plt.tight_layout()
         plt.savefig(f"{self.figures_dir}/calibration_analysis.pdf", dpi=300, bbox_inches='tight')
@@ -2184,12 +2221,12 @@ class ComprehensiveExperimentFramework:
                 n_features = min(20, correlation_matrix.shape[0])
                 correlation_matrix = correlation_matrix[:n_features, :n_features]
 
-            plt.figure(figsize=(10, 8))
+            fig, ax = plt.subplots(figsize=(10, 8))
             sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', center=0.0,
-                       square=True, cbar_kws={'label': 'Attention Correlation'})
-            plt.title('Cross-Attention Correlation Matrix')
-            plt.xlabel('Feature Index')
-            plt.ylabel('Feature Index')
+                       square=True, cbar_kws={'label': 'Attention Correlation'}, ax=ax)
+            ax.set_xlabel('Feature Index')
+            ax.set_ylabel('Feature Index')
+            self.add_frame_to_axes(ax)
             plt.savefig(f"{self.figures_dir}/attention_correlation.pdf", dpi=300, bbox_inches='tight')
             plt.close()
             print("    ✅ Attention correlation figure saved successfully")
@@ -2265,12 +2302,13 @@ class ComprehensiveExperimentFramework:
         param2.data = original_param2
 
         # Plot loss landscape
-        plt.figure(figsize=(10, 8))
-        contour = plt.contour(X, Y, Z, levels=15, colors='black', alpha=0.4, linewidths=0.5)
-        plt.contourf(X, Y, Z, levels=15, cmap='viridis', alpha=0.8)
-        plt.colorbar(label='Loss Value')
-        plt.xlabel('Parameter θ₁ Perturbation')
-        plt.ylabel('Parameter θ₂ Perturbation')
+        fig, ax = plt.subplots(figsize=(10, 8))
+        contour = ax.contour(X, Y, Z, levels=15, colors='black', alpha=0.4, linewidths=0.5)
+        contourf = ax.contourf(X, Y, Z, levels=15, cmap='viridis', alpha=0.8)
+        plt.colorbar(contourf, ax=ax, label='Loss Value')
+        ax.set_xlabel('Parameter θ₁ Perturbation')
+        ax.set_ylabel('Parameter θ₂ Perturbation')
+        self.add_frame_to_axes(ax)
         plt.title('Loss Landscape Visualization')
 
         # Add optimization path (sorted by loss value to simulate optimization)
@@ -2279,8 +2317,8 @@ class ComprehensiveExperimentFramework:
             sorted_indices = np.argsort(path_losses)[:5]  # Take 5 best points
             path_x = [optimization_path_x[i] for i in sorted_indices]
             path_y = [optimization_path_y[i] for i in sorted_indices]
-            plt.plot(path_x, path_y, 'r-o', linewidth=3, markersize=8, label='Optimization Path')
-            plt.legend()
+            ax.plot(path_x, path_y, 'r-o', linewidth=3, markersize=8, label='Optimization Path')
+            ax.legend()
 
         plt.savefig(f"{self.figures_dir}/loss_landscape.pdf", dpi=300, bbox_inches='tight')
         plt.close()
@@ -2327,18 +2365,19 @@ class ComprehensiveExperimentFramework:
             print("Warning: No confidence data available, skipping confidence histogram")
             return
 
-        plt.figure(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Plot histograms
-        plt.hist(correct_confidences, bins=30, alpha=0.7, label='Correct Predictions', color='green', density=True)
-        plt.hist(incorrect_confidences, bins=30, alpha=0.7, label='Incorrect Predictions', color='red', density=True)
+        ax.hist(correct_confidences, bins=30, alpha=0.7, label='Correct Predictions', color='green', density=True)
+        ax.hist(incorrect_confidences, bins=30, alpha=0.7, label='Incorrect Predictions', color='red', density=True)
 
-        plt.xlabel('Confidence Score')
-        plt.ylabel('Density')
-        plt.title('Confidence Distribution for Correct vs Incorrect Predictions')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
+        ax.set_xlabel('Confidence Score')
+        ax.set_ylabel('Density')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        self.add_frame_to_axes(ax)
 
+        plt.tight_layout()
         plt.savefig(f"{self.figures_dir}/confidence_histogram.pdf", dpi=300, bbox_inches='tight')
         plt.close()
 
@@ -2384,23 +2423,24 @@ class ComprehensiveExperimentFramework:
         accuracies = bin_accuracies
         confidences = bin_confidences
 
-        plt.figure(figsize=(8, 8))
+        fig, ax = plt.subplots(figsize=(8, 8))
 
         # Plot reliability diagram
-        plt.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration', linewidth=2)
-        plt.plot(confidences, accuracies, 'ro-', label='Our Method', linewidth=2, markersize=8)
+        ax.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration', linewidth=2)
+        ax.plot(confidences, accuracies, 'ro-', label='Our Method', linewidth=2, markersize=8)
 
         # Fill area between perfect and actual
-        plt.fill_between(confidences, confidences, accuracies, alpha=0.3, color='red')
+        ax.fill_between(confidences, confidences, accuracies, alpha=0.3, color='red')
 
-        plt.xlabel('Confidence')
-        plt.ylabel('Accuracy')
-        plt.title('Reliability Diagram')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.xlim(0, 1)
-        plt.ylim(0, 1)
+        ax.set_xlabel('Confidence')
+        ax.set_ylabel('Accuracy')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        self.add_frame_to_axes(ax)
 
+        plt.tight_layout()
         plt.savefig(f"{self.figures_dir}/reliability_diagram.pdf", dpi=300, bbox_inches='tight')
         plt.close()
 

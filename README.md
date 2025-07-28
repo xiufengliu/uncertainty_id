@@ -3,14 +3,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#)
-[![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](#)
 
-A production-ready implementation of our novel uncertainty-aware intrusion detection framework featuring Bayesian ensemble transformers with rigorous theoretical foundations and principled uncertainty quantification.
+A production-ready implementation of an uncertainty-aware intrusion detection framework featuring Bayesian ensemble transformers with rigorous theoretical foundations and principled uncertainty quantification.
 
-## 🎯 Performance Highlights
+## Performance Highlights
 
-Our method achieves strong performance across standard benchmark datasets:
+The method achieves strong performance across standard benchmark datasets:
 
 | Dataset | Accuracy | F1-Score | False Positive Rate | Expected Calibration Error |
 |---------|----------|----------|-------------------|---------------------------|
@@ -21,45 +19,35 @@ Our method achieves strong performance across standard benchmark datasets:
 
 *Results from comprehensive experimental validation on NVIDIA A100 GPU cluster.*
 
-## 🚀 Key Features
+## Key Features
 
-- **🎯 Theoretical Foundation**: Novel convergence guarantees and uncertainty bounds for transformer-based intrusion detection
-- **🔬 Uncertainty Quantification**: Separates epistemic and aleatoric uncertainty for better decision-making
-- **🤖 Bayesian Ensemble**: Multiple transformer models provide robust predictions with confidence estimates
-- **⚡ Real-time Processing**: Optimized for production deployment in network security operations centers
-- **📊 Comprehensive Evaluation**: Extensive metrics for both detection performance and uncertainty calibration
-- **🐳 Production Ready**: Docker/Kubernetes deployment with monitoring and logging
-- **🔧 Easy Integration**: REST API for seamless integration with existing security infrastructure
+- **Theoretical Foundation**: Novel convergence guarantees and uncertainty bounds for transformer-based intrusion detection
+- **Uncertainty Quantification**: Separates epistemic and aleatoric uncertainty for better decision-making
+- **Bayesian Ensemble**: Multiple transformer models provide robust predictions with confidence estimates
+- **Real-time Processing**: Optimized for production deployment in network security operations centers
+- **Comprehensive Evaluation**: Extensive metrics for both detection performance and uncertainty calibration
+- **Production Ready**: Complete implementation with API and deployment tools
+- **Easy Integration**: REST API for seamless integration with existing security infrastructure
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
 - [Architecture](#architecture)
-- [Usage Examples](#usage-examples)
 - [Experimental Results](#experimental-results)
-- [API Documentation](#api-documentation)
-- [Evaluation](#evaluation)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
 - [Research & Development](#research--development)
 - [License](#license)
+- [Contributing](#contributing)
 - [Support](#support)
 
-## 🛠️ Installation
+## Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
 - PyTorch 2.0 or higher
 - CUDA (optional, for GPU acceleration)
-
-### Install from PyPI
-
-```bash
-pip install uncertainty-ids
-```
 
 ### Install from Source
 
@@ -79,7 +67,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 uncertainty-ids/
@@ -88,29 +76,24 @@ uncertainty-ids/
 │   ├── data/                 # Data loading and preprocessing
 │   ├── training/             # Training utilities and loops
 │   ├── evaluation/           # Evaluation metrics and calibration
-│   ├── api/                  # REST API implementation
-│   ├── cli/                  # Command-line interface
 │   └── utils/                # Utility functions
 ├── data/                     # Dataset storage
-│   ├── raw/                  # Raw datasets
 │   └── processed/            # Preprocessed datasets (NSL-KDD, CICIDS2017, UNSW-NB15, SWaT)
 ├── figures/                  # Generated figures and visualizations
-├── experiment_results/      # Experimental validation results
+├── experiment_results/       # Experimental validation results
 ├── examples/                 # Usage examples and tutorials
-├── tests/                    # Unit and integration tests
 ├── scripts/                  # Utility scripts
 ├── configs/                  # Configuration files
 ├── requirements.txt          # Production dependencies
-├── requirements-dev.txt      # Development dependencies
 └── README.md                 # This file
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Basic Usage
+### Basic Usage
 
 ```python
-from uncertainty_ids import BayesianEnsembleIDS, NetworkDataProcessor
+from uncertainty_ids import BayesianEnsembleIDS
 from uncertainty_ids.data import SyntheticIDSDataset
 import torch
 
@@ -134,7 +117,7 @@ print(f"Confidence: {results['confidence']}")
 print(f"Uncertainty: {results['total_uncertainty']}")
 ```
 
-### 2. Training a Model
+### Training a Model
 
 ```python
 from uncertainty_ids.training import UncertaintyIDSTrainer
@@ -160,52 +143,7 @@ history = trainer.train(train_loader, val_loader, n_epochs=100)
 trainer.save_model('models/uncertainty_ids_model.pth')
 ```
 
-### 3. REST API Server
-
-```python
-from uncertainty_ids.api import create_app
-import uvicorn
-
-# Create FastAPI app
-app = create_app(
-    model_path='models/uncertainty_ids_model.pth',
-    processor_path='preprocessors/'
-)
-
-# Run server
-uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-### 4. Making API Requests
-
-```python
-import requests
-
-# Prepare network flow data
-flow_data = {
-    "current_flow": {
-        "duration": 0.5,
-        "protocol_type": "tcp",
-        "service": "http",
-        "flag": "SF",
-        "src_bytes": 1024,
-        "dst_bytes": 512,
-        # ... other 36 features
-    },
-    "return_uncertainty": True,
-    "return_explanation": True
-}
-
-# Make prediction request
-response = requests.post("http://localhost:8000/predict", json=flow_data)
-result = response.json()
-
-print(f"Prediction: {result['prediction_label']}")
-print(f"Confidence: {result['confidence']:.3f}")
-print(f"Requires Review: {result['requires_review']}")
-```
-
-## 🏗️ Architecture
+## Architecture
 
 ### Mathematical Foundation
 
@@ -247,11 +185,11 @@ Total Uncertainty = Epistemic Uncertainty + Aleatoric Uncertainty
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## 📊 Experimental Results
+## Experimental Results
 
 ### Benchmark Performance
 
-Our method has been extensively evaluated on three standard intrusion detection datasets:
+The method has been extensively evaluated on three standard intrusion detection datasets:
 
 #### NSL-KDD Dataset
 - **Accuracy**: 78.48% (best among all tested methods)
@@ -282,18 +220,18 @@ Our method has been extensively evaluated on three standard intrusion detection 
 
 ```bash
 # Run experiments on all datasets
-python experiments.py --config configs/default_config.yaml
+python comprehensive_experiments.py
 
 # Generate figures and analysis
-python create_figures.py
+python extract_real_data_figures.py
 
 # View detailed results
-cat experiment_results/all_results.json
+cat comprehensive_experiment_results.json
 ```
 
-## 📚 Research & Development
+## Research & Development
 
-This work introduces a novel uncertainty-aware intrusion detection framework based on transformer in-context learning theory with Bayesian ensemble methods.
+This work introduces an uncertainty-aware intrusion detection framework based on transformer in-context learning theory with Bayesian ensemble methods.
 
 ### Key Contributions
 
@@ -301,7 +239,7 @@ This work introduces a novel uncertainty-aware intrusion detection framework bas
 2. **Uncertainty Quantification**: Principled decomposition into epistemic and aleatoric components
 3. **Convergence Guarantees**: Formal bounds for single-layer transformer ensembles
 4. **Experimental Validation**: Comprehensive evaluation on standard benchmarks
-5. **Production Ready**: Complete implementation with API and deployment tools
+5. **Production Ready**: Complete implementation with deployment tools
 
 ### Technical Innovations
 
@@ -317,17 +255,23 @@ This work introduces a novel uncertainty-aware intrusion detection framework bas
 - **Intrusion Detection**: Novel architecture for modern threat detection
 - **Ensemble Methods**: Principled diversity regularization for improved calibration
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+Contributions are welcome! Please follow these guidelines:
 
-## 📞 Support
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## Support
 
 For questions, issues, or support:
 - Open an issue on GitHub
-- Check the documentation
 - Review the examples in the `examples/` directory
+- Check the experimental results in `experiment_results/`

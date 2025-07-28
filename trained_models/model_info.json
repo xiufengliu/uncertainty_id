@@ -1,0 +1,24 @@
+{
+  "experiment_timestamp": "2025-07-28T02:10:53.938228",
+  "model_type": "BayesianEnsembleTransformer",
+  "datasets_trained_on": [
+    "NSL-KDD",
+    "CICIDS2017",
+    "UNSW-NB15",
+    "SWaT"
+  ],
+  "performance_summary": {
+    "NSL-KDD": {
+      "accuracy": 0.7566092973740242,
+      "precision": 0.9826544021024967,
+      "recall": 0.5827164341930959,
+      "f1_score": 0.731595167049846,
+      "fpr": 0.013592832869941304,
+      "tpr": 0.5827164341930959,
+      "auc": 0.7903058926629558,
+      "uncertainty_accuracy_correlation": -0.003619725895699016,
+      "mutual_information": 0.0009970496832894247,
+      "aurc": 0.24903863625927405,
+      "ece": 0.15674111152938958,
+      "brier_score": 0.20875064593276121,
+      "mean_epistemic_uncertainty": 

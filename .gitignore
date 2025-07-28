@@ -153,10 +153,12 @@ Thumbs.db
 data/raw/
 data/external/
 datasets/
-logs/
-checkpoints/
-models/
-results/
+
+# Keep essential results and figures
+# logs/
+# checkpoints/
+# models/
+# results/
 
 # Paper directory (excluded from repository)
 paper/

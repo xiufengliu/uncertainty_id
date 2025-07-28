@@ -38,12 +38,17 @@ def configure_plotting_for_pdf():
         'savefig.edgecolor': 'none',
         
         # Axes settings
-        'axes.linewidth': 1.0,
+        'axes.linewidth': 1.5,
         'axes.grid': True,
         'axes.axisbelow': True,
         'axes.labelsize': 12,
         'axes.titlesize': 14,
         'axes.titleweight': 'bold',
+        'axes.edgecolor': 'black',
+        'axes.spines.left': True,
+        'axes.spines.bottom': True,
+        'axes.spines.top': True,
+        'axes.spines.right': True,
         
         # Grid settings
         'grid.alpha': 0.3,
@@ -61,6 +66,10 @@ def configure_plotting_for_pdf():
         'ytick.labelsize': 11,
         'xtick.direction': 'in',
         'ytick.direction': 'in',
+        'xtick.major.width': 1.2,
+        'ytick.major.width': 1.2,
+        'xtick.minor.width': 0.8,
+        'ytick.minor.width': 0.8,
         
         # Line settings
         'lines.linewidth': 2.0,
@@ -79,7 +88,11 @@ def configure_plotting_for_pdf():
         'axes.grid': True,
         'grid.alpha': 0.3,
         'axes.edgecolor': 'black',
-        'axes.linewidth': 1.0
+        'axes.linewidth': 1.5,
+        'axes.spines.left': True,
+        'axes.spines.bottom': True,
+        'axes.spines.top': True,
+        'axes.spines.right': True
     })
     
     # Use a publication-friendly color palette
