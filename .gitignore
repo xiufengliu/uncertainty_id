@@ -163,6 +163,13 @@ datasets/
 # Paper directory (excluded from repository)
 paper/
 
+# Tables and optimization files (excluded from repository)
+tables/
+tables_optimized/
+optimize_*.py
+*optimized*.json
+generate_*_tables.py
+
 # Temporary files
 *.tmp
 *.temp
