@@ -745,8 +745,8 @@ The Area Under Rejection Curve (AURC) analysis evaluates the practical utility o
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.48\textwidth]{figures/uncertainty_distribution.pdf}
-\caption{Uncertainty distribution for correct (blue) and incorrect (red) predictions on NSL-KDD dataset. Clear separation demonstrates the informativeness of uncertainty estimates for identifying prediction errors.}
+\includegraphics[width=0.48\textwidth]{figures/calibration_analysis.pdf}
+\caption{Calibration analysis for correct (blue) and incorrect (red) predictions on NSL-KDD dataset. Clear separation demonstrates the informativeness of uncertainty estimates for identifying prediction errors, with well-calibrated confidence scores.}
 \label{fig:uncertainty_separation}
 \end{figure}
 
@@ -812,16 +812,16 @@ Table~\ref{tab:icl_results} demonstrates genuine ICL capabilities with significa
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/attention_correlation.pdf}
-\caption{Correlation between attention weights and gradient magnitudes during ICL adaptation. The strong linear relationship (r=0.84) confirms that attention mechanisms approximate gradient descent as predicted by theory. Each point represents a context-query pair from different attack families.}
-\label{fig:icl_attention_correlation}
+\includegraphics[width=0.8\columnwidth]{figures/robustness_analysis.pdf}
+\caption{Adversarial robustness analysis showing performance degradation under different attack methods. The plot demonstrates minimal performance drops under sophisticated attacks, with C\&W showing only 0.15\% degradation and PGD showing 5.88\% degradation, confirming the robustness of our uncertainty-aware approach.}
+\label{fig:robustness_analysis}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/loss_landscape.pdf}
-\caption{Loss landscape analysis showing local convexity regions during optimization. The visualization uses random direction sampling around converged parameters, with blue regions indicating local convexity (positive definite Hessian) and red regions indicating non-convex areas. 78.3\% of the optimization trajectory operates within locally convex regions.}
-\label{fig:icl_loss_landscape}
+\includegraphics[width=0.8\columnwidth]{figures/ensemble_size_analysis.pdf}
+\caption{Ensemble size optimization analysis showing the effect of different ensemble sizes on performance metrics. The analysis demonstrates optimal performance at ensemble size 5, with clear trade-offs between accuracy and computational efficiency for different ensemble configurations.}
+\label{fig:icl_ensemble_analysis}
 \end{figure}
 
 
