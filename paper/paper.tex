@@ -870,6 +870,8 @@ Table~\ref{tab:icl_performance} shows few-shot learning capabilities with compet
 
 \textbf{Limitations of ICL Implementation:} While our approach draws inspiration from ICL theory, we acknowledge that demonstrating genuine in-context learning for cybersecurity applications remains challenging. The performance improvements with more shots may reflect better statistical estimation rather than true ICL adaptation. Future work should focus on more rigorous evaluation protocols that can definitively demonstrate ICL capabilities for cybersecurity data, including adaptation to completely novel attack families not seen during training.
 
+\textbf{Uncertainty Quality Validation:} Figure~\ref{fig:uncertainty_validation} demonstrates the quality of our uncertainty estimates by showing the correlation between prediction confidence and correctness. High uncertainty predictions are more likely to be incorrect, while low uncertainty predictions are more likely to be correct, validating that our uncertainty estimates provide meaningful information for security decision-making.
+
 
 
 \subsubsection{Attention Mechanism Analysis}
@@ -885,9 +887,9 @@ We analyze the attention patterns during training to verify the theoretical foun
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\columnwidth]{figures/system_overview.pdf}
-\caption{ICL system architecture showing the framework components during in-context learning adaptation. The diagram illustrates how the uncertainty-aware ensemble processes context examples and adapts to new attack patterns through the ICL mechanism.}
-\label{fig:icl_system_overview}
+\includegraphics[width=0.8\columnwidth]{figures/uncertainty_distribution.pdf}
+\caption{Uncertainty distribution analysis showing the relationship between prediction confidence and correctness across different datasets. The plots demonstrate that higher uncertainty correlates with prediction errors, validating the informativeness of our uncertainty estimates for security decision-making.}
+\label{fig:uncertainty_validation}
 \end{figure}
 
 
