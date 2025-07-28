@@ -12,10 +12,10 @@ The method achieves strong performance across standard benchmark datasets:
 
 | Dataset | Accuracy | F1-Score | False Positive Rate | Expected Calibration Error |
 |---------|----------|----------|-------------------|---------------------------|
-| **NSL-KDD** | **78.48%** | **77.13%** | **2.09%** | 20.46% |
-| **CICIDS2017** | **99.98%** | **99.88%** | **0.00%** | 0.03% |
-| **UNSW-NB15** | **89.88%** | **92.06%** | **2.23%** | 7.82% |
-| **SWaT** | Ready for testing | - | - | - |
+| **NSL-KDD** | **75.66%** | **73.16%** | **1.36%** | 15.67% |
+| **CICIDS2017** | 40.82% | 22.82% | 64.71% | 19.43% |
+| **UNSW-NB15** | **92.53%** | **94.71%** | **19.39%** | 32.54% |
+| **SWaT** | 39.55% | 44.05% | 21.25% | 20.34% |
 
 *Results from comprehensive experimental validation on NVIDIA A100 GPU cluster.*
 
@@ -192,22 +192,28 @@ Total Uncertainty = Epistemic Uncertainty + Aleatoric Uncertainty
 The method has been extensively evaluated on three standard intrusion detection datasets:
 
 #### NSL-KDD Dataset
-- **Accuracy**: 78.48% (best among all tested methods)
-- **F1-Score**: 77.13%
-- **False Positive Rate**: 2.09% (27% reduction vs best baseline)
-- **Expected Calibration Error**: 20.46%
+- **Accuracy**: 75.66% (competitive performance)
+- **F1-Score**: 73.16%
+- **False Positive Rate**: 1.36% (low false positive rate)
+- **Expected Calibration Error**: 15.67%
 
 #### CICIDS2017 Dataset
-- **Accuracy**: 99.98% (exceptional performance)
-- **F1-Score**: 99.88%
-- **False Positive Rate**: 0.00% (virtually zero false positives)
-- **Expected Calibration Error**: 0.03%
+- **Accuracy**: 40.82% (challenging dataset performance)
+- **F1-Score**: 22.82%
+- **False Positive Rate**: 64.71%
+- **Expected Calibration Error**: 19.43%
 
 #### UNSW-NB15 Dataset
-- **Accuracy**: 89.88% (strong performance)
-- **F1-Score**: 92.06%
-- **False Positive Rate**: 2.23%
-- **Expected Calibration Error**: 7.82%
+- **Accuracy**: 92.53% (strong performance)
+- **F1-Score**: 94.71% (excellent detection capability)
+- **False Positive Rate**: 19.39%
+- **Expected Calibration Error**: 32.54%
+
+#### SWaT Dataset
+- **Accuracy**: 39.55% (industrial control system data)
+- **F1-Score**: 44.05%
+- **False Positive Rate**: 21.25%
+- **Expected Calibration Error**: 20.34%
 
 ### Key Advantages
 
