@@ -160,9 +160,6 @@ datasets/
 # models/
 # results/
 
-# Paper directory (excluded from repository)
-paper/
-
 # Tables and optimization files (excluded from repository)
 tables/
 tables_optimized/
