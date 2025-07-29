@@ -59,7 +59,9 @@ plt.rcParams.update({
 # Import our uncertainty-aware framework
 from uncertainty_ids.models.transformer import BayesianEnsembleTransformer
 from uncertainty_ids.models.uncertainty import UncertaintyQuantifier
+from uncertainty_ids.models.evidential_neural_network import EvidentialNeuralNetwork
 from uncertainty_ids.training.trainer import UncertaintyAwareTrainer
+from uncertainty_ids.training.enn_trainer import ENNTrainer
 from uncertainty_ids.evaluation.evaluator import ModelEvaluator
 from uncertainty_ids.data.datasets import BaseIDSDataset
 
@@ -961,9 +963,111 @@ class ComprehensiveExperimentFramework:
         return self.evaluate_mc_dropout(train_loader, val_loader, test_loader, dataset_name)
 
     def evaluate_evidential_learning(self, train_loader, val_loader, test_loader, dataset_name: str) -> Dict:
-        """Evaluate Evidential Learning method (simplified)."""
-        # For simplicity, use Deep Ensemble as approximation
-        return self.evaluate_deep_ensemble(train_loader, val_loader, test_loader, dataset_name)
+        """Evaluate Evidential Neural Networks (ENN) method."""
+        print("      Training Evidential Neural Network...")
+
+        # Get dataset parameters
+        n_continuous, n_categorical, categorical_vocab_sizes = self.get_dataset_params(dataset_name)
+        input_dim = n_continuous + n_categorical
+
+        # Create ENN model
+        model = EvidentialNeuralNetwork(
+            input_dim=input_dim,
+            hidden_dims=[128, 64],
+            num_classes=2,
+            dropout_rate=0.1
+        )
+
+        # Create trainer
+        trainer = ENNTrainer(
+            model=model,
+            device=self.device,
+            learning_rate=0.001,
+            weight_decay=1e-4,
+            annealing_step=10
+        )
+
+        # Train model
+        print("        Training ENN for 20 epochs...")
+        training_history = trainer.train(
+            train_loader=train_loader,
+            val_loader=val_loader,
+            num_epochs=20
+        )
+
+        # Evaluate on test set
+        print("        Evaluating ENN on test set...")
+        model.eval()
+        all_preds = []
+        all_labels = []
+        all_uncertainties = []
+        all_confidences = []
+        all_probs = []
+
+        with torch.no_grad():
+            for cont_features, cat_features, labels in test_loader:
+                cont_features = cont_features.to(self.device)
+                cat_features = cat_features.to(self.device)
+                labels = labels.to(self.device)
+
+                # Concatenate features
+                features = torch.cat([cont_features, cat_features.float()], dim=1)
+
+                # Get predictions with uncertainty
+                outputs = model.predict_with_uncertainty(features)
+
+                all_preds.extend(outputs['predictions'].cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+                all_uncertainties.extend(outputs['total_uncertainty'].cpu().numpy())
+                all_confidences.extend(outputs['confidence'].cpu().numpy())
+                all_probs.extend(outputs['max_probability'].cpu().numpy())
+
+        # Compute metrics
+        all_preds = np.array(all_preds)
+        all_labels = np.array(all_labels)
+        all_uncertainties = np.array(all_uncertainties)
+        all_confidences = np.array(all_confidences)
+        all_probs = np.array(all_probs)
+
+        # Basic metrics
+        accuracy = accuracy_score(all_labels, all_preds)
+        precision = precision_score(all_labels, all_preds, average='weighted', zero_division=0)
+        recall = recall_score(all_labels, all_preds, average='weighted', zero_division=0)
+        f1 = f1_score(all_labels, all_preds, average='weighted', zero_division=0)
+
+        # Confusion matrix for FPR calculation
+        from sklearn.metrics import confusion_matrix
+        cm = confusion_matrix(all_labels, all_preds)
+        if cm.shape == (2, 2):
+            tn, fp, fn, tp = cm.ravel()
+            fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+        else:
+            fpr = 0.0
+
+        # Expected Calibration Error
+        from uncertainty_ids.evaluation.metrics import CalibrationMetrics
+        correctness = (all_preds == all_labels).astype(float)
+        ece = CalibrationMetrics.expected_calibration_error(all_confidences, correctness)
+
+        # Uncertainty correlation (should be negative - higher uncertainty for wrong predictions)
+        uncertainty_correlation = np.corrcoef(all_uncertainties, correctness)[0, 1]
+
+        results = {
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1,
+            'fpr': fpr,
+            'ece': ece,
+            'mean_uncertainty': np.mean(all_uncertainties),
+            'mean_confidence': np.mean(all_confidences),
+            'uncertainty_correlation': uncertainty_correlation,
+            'training_history': training_history
+        }
+
+        print(f"        ENN Results - Accuracy: {accuracy:.4f}, F1: {f1:.4f}, FPR: {fpr:.4f}, ECE: {ece:.4f}")
+
+        return results
 
     def evaluate_single_transformer(self, train_loader, val_loader, test_loader, dataset_name: str) -> Dict:
         """Evaluate single transformer (our method with ensemble_size=1)."""

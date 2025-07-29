@@ -158,6 +158,15 @@ Where:
 - **W^V, W^KQ**: Learnable transformer parameters
 - **ρ**: Normalization factor (sequence length)
 
+### Baseline Methods
+
+The framework includes comprehensive baseline implementations:
+
+- **Traditional ML**: Random Forest, SVM, Logistic Regression
+- **Deep Learning**: MLP, LSTM, CNN
+- **Uncertainty-Aware**: MC Dropout, Deep Ensemble, Variational Inference, **Evidential Neural Networks (ENN)**
+- **Our Variants**: Single Transformer, Bayesian Ensemble Transformer
+
 ### Uncertainty Decomposition
 
 Total uncertainty is decomposed into two components:
