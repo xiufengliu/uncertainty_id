@@ -163,6 +163,11 @@ datasets/
 # Paper directory (excluded from GitHub but kept locally)
 paper/
 
+# Experimental configuration and figure generation scripts (excluded from repository)
+experiment_config.json
+extract_real_data_figures.py
+comprehensive_experiment_results.json
+
 # Tables and optimization files (excluded from repository)
 tables/
 tables_optimized/

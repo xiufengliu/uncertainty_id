@@ -4,30 +4,16 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 
-A production-ready implementation of an uncertainty-aware intrusion detection framework featuring Bayesian ensemble transformers with rigorous theoretical foundations and principled uncertainty quantification.
-
-## Performance Highlights
-
-The method achieves strong performance across standard benchmark datasets:
-
-| Dataset | Accuracy | F1-Score | False Positive Rate | Expected Calibration Error |
-|---------|----------|----------|-------------------|---------------------------|
-| **NSL-KDD** | **75.66%** | **73.16%** | **1.36%** | 15.67% |
-| **CICIDS2017** | 40.82% | 22.82% | 64.71% | 19.43% |
-| **UNSW-NB15** | **92.53%** | **94.71%** | **19.39%** | 32.54% |
-| **SWaT** | 39.55% | 44.05% | 21.25% | 20.34% |
-
-*Results from comprehensive experimental validation on NVIDIA A100 GPU cluster.*
+A research implementation of an uncertainty-aware intrusion detection framework featuring Bayesian ensemble transformers with rigorous theoretical foundations and principled uncertainty quantification.
 
 ## Key Features
 
 - **Theoretical Foundation**: Novel convergence guarantees and uncertainty bounds for transformer-based intrusion detection
 - **Uncertainty Quantification**: Separates epistemic and aleatoric uncertainty for better decision-making
 - **Bayesian Ensemble**: Multiple transformer models provide robust predictions with confidence estimates
-- **Real-time Processing**: Optimized for production deployment in network security operations centers
-- **Comprehensive Evaluation**: Extensive metrics for both detection performance and uncertainty calibration
-- **Production Ready**: Complete implementation with API and deployment tools
-- **Easy Integration**: REST API for seamless integration with existing security infrastructure
+- **Comprehensive Baselines**: Includes traditional ML, deep learning, and uncertainty-aware methods
+- **Evidential Neural Networks**: State-of-the-art uncertainty quantification through evidential learning
+- **Modular Design**: Clean, extensible architecture for research and development
 
 ## Table of Contents
 
@@ -35,7 +21,6 @@ The method achieves strong performance across standard benchmark datasets:
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
 - [Architecture](#architecture)
-- [Experimental Results](#experimental-results)
 - [Research & Development](#research--development)
 - [License](#license)
 - [Contributing](#contributing)
@@ -52,17 +37,8 @@ The method achieves strong performance across standard benchmark datasets:
 ### Install from Source
 
 ```bash
-git clone https://github.com/xiuli/IntrDetection.git
-cd IntrDetection
-pip install -r requirements.txt
-pip install -e .
-```
-
-### Development Installation
-
-```bash
-git clone https://github.com/xiuli/IntrDetection.git
-cd IntrDetection
+git clone https://github.com/xiufengliu/uncertainty_id.git
+cd uncertainty_id
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -194,55 +170,7 @@ Total Uncertainty = Epistemic Uncertainty + Aleatoric Uncertainty
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-## Experimental Results
 
-### Benchmark Performance
-
-The method has been extensively evaluated on three standard intrusion detection datasets:
-
-#### NSL-KDD Dataset
-- **Accuracy**: 75.66% (competitive performance)
-- **F1-Score**: 73.16%
-- **False Positive Rate**: 1.36% (low false positive rate)
-- **Expected Calibration Error**: 15.67%
-
-#### CICIDS2017 Dataset
-- **Accuracy**: 40.82% (challenging dataset performance)
-- **F1-Score**: 22.82%
-- **False Positive Rate**: 64.71%
-- **Expected Calibration Error**: 19.43%
-
-#### UNSW-NB15 Dataset
-- **Accuracy**: 92.53% (strong performance)
-- **F1-Score**: 94.71% (excellent detection capability)
-- **False Positive Rate**: 19.39%
-- **Expected Calibration Error**: 32.54%
-
-#### SWaT Dataset
-- **Accuracy**: 39.55% (industrial control system data)
-- **F1-Score**: 44.05%
-- **False Positive Rate**: 21.25%
-- **Expected Calibration Error**: 20.34%
-
-### Key Advantages
-
-1. **Uncertainty Quantification**: Provides meaningful confidence estimates for security analysts
-2. **Competitive Performance**: Strong results across diverse network security scenarios
-3. **Calibrated Predictions**: Well-calibrated uncertainty estimates enable effective human-AI collaboration
-4. **Theoretical Guarantees**: Convergence bounds and uncertainty decomposition framework
-
-### Reproducing Results
-
-```bash
-# Run experiments on all datasets
-python comprehensive_experiments.py
-
-# Generate figures and analysis
-python extract_real_data_figures.py
-
-# View detailed results
-cat comprehensive_experiment_results.json
-```
 
 ## Research & Development
 
@@ -253,8 +181,8 @@ This work introduces an uncertainty-aware intrusion detection framework based on
 1. **Theoretical Framework**: Novel application of transformer ICL theory to cybersecurity
 2. **Uncertainty Quantification**: Principled decomposition into epistemic and aleatoric components
 3. **Convergence Guarantees**: Formal bounds for single-layer transformer ensembles
-4. **Experimental Validation**: Comprehensive evaluation on standard benchmarks
-5. **Production Ready**: Complete implementation with deployment tools
+4. **Comprehensive Baselines**: Implementation of multiple uncertainty-aware methods
+5. **Evidential Learning**: Integration of state-of-the-art evidential neural networks
 
 ### Technical Innovations
 
@@ -289,4 +217,4 @@ Contributions are welcome! Please follow these guidelines:
 For questions, issues, or support:
 - Open an issue on GitHub
 - Review the examples in the `examples/` directory
-- Check the experimental results in `experiment_results/`
+- Check the documentation and code comments
